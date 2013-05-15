@@ -15,12 +15,13 @@ public partial class UserDefinedFunctions
     /// <param name="strength">The encryption strength to apply: 0 = none, 1 = AES 128, 2 = AES 256</param>
     /// <returns></returns>
     [SqlFunction]
-    public static string SqlDecrypt(byte[] payload, byte strength)
+    public static string SqlDecrypt(string json, int strength)
     {
+        byte[] bson = Convert.FromBase64String(json);
         CryptoManager crypto = new CryptoManager();
 
-        byte[] bson = crypto.DecryptAES(payload, (CryptoLevel)strength);
-        return Encoding.UTF8.GetString(bson);
+        byte[] jbytes = crypto.DecryptAES(bson, (CryptoLevel)Convert.ToByte(strength));
+        return Encoding.UTF8.GetString(jbytes);
     }
 
     /// <summary>
@@ -30,10 +31,10 @@ public partial class UserDefinedFunctions
     /// <param name="strength">The encryption strength to apply: 0 = none, 1 = AES 128, 2 = AES 256</param>
     /// <returns>byte[]</returns>
     [SqlFunction]
-    public static byte[] SqlEncrypt(string json, byte strength)
-    {
+    public static byte[] SqlEncrypt(string json, int strength)
+    {        
         CryptoManager crypto = new CryptoManager();
-        return crypto.EncryptAES(Encoding.UTF8.GetBytes(json), (CryptoLevel)strength);
+        return crypto.EncryptAES(Encoding.UTF8.GetBytes(json), (CryptoLevel)Convert.ToByte(strength));
     }
 };
 
