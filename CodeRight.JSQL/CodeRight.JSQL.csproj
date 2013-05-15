@@ -58,7 +58,9 @@
     <Compile Include="JsonStruct.cs" />
     <Compile Include="OpenSslCompatDeriveBytes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlToJson.cs" />
     <Compile Include="ToJson.cs" />
+    <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Test Scripts\Test.sql">
