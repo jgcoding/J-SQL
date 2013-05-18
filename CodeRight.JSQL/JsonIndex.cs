@@ -24,8 +24,8 @@ public partial class UserDefinedFunctions
                      where Regex.IsMatch(di.Url, f.Selector) && String.Equals(f.Reference, docname, sc)
                      select new IndexedRow
                      {
-                         DocumentName = docname,
-                         NodeKey = di.NodeKey,
+                         _type = docname,
+                         _id = di.NodeKey,
                          Url = di.Url,
                          ItemKey = di.ItemKey,
                          ItemValue = di.ItemValue,
@@ -59,7 +59,7 @@ public partial class UserDefinedFunctions
         /*update each JsonMergeSchema with the source value from the results */
         var source = (from ix in rindex.Cast<JsonMergeSchema>()
                       from mp in map.Cast<IndexedRow>()
-                      where Regex.IsMatch(mp.Url, ix.SourceSelector) && String.Equals(ix.SourceReference, mp.DocumentName, sc)
+                      where Regex.IsMatch(mp.Url, ix.SourceSelector) && String.Equals(ix.SourceReference, mp._type, sc)
                       select new JsonMergeSchema
                       {
                           SourceUrl = mp.Url,
@@ -81,7 +81,7 @@ public partial class UserDefinedFunctions
             foreach (IndexedRow r in mapped)
             {
                 if (Regex.IsMatch(r.Url, s.TargetSelector)
-                        && String.Equals(r.DocumentName, s.TargetReference, sc)
+                        && String.Equals(r._type, s.TargetReference, sc)
                         && String.Equals(s.SourceKey, MergeProperty(r, s.TargetKey), sc))
                 {
                     merged.Add((IndexedRow)UpdateProperty(r, s.TargetValue, s.SourceValue));
@@ -93,7 +93,7 @@ public partial class UserDefinedFunctions
         foreach (var mg in merged)
         {
             //map.RemoveAll(m => String.Equals(m.NodeKey, mg.NodeKey, sc) && String.Equals(m.Selector, mg.Selector, sc));
-            map.RemoveAll(m => String.Equals(m.Selector, mg.Selector, sc) | String.Equals(m.NodeKey, mg.NodeKey, sc));
+            map.RemoveAll(m => String.Equals(m.Selector, mg.Selector, sc) | String.Equals(m._id, mg._id, sc));
         }
         map = merged.Count() > 0 ? map.Union(merged).ToList() : map;
         return map;
@@ -108,11 +108,11 @@ public partial class UserDefinedFunctions
         /*select all keys matching the filter selector.*/
         List<IndexedRow> matched = (from ix in rindex.Cast<JsonReduceSchema>()
                                     from mp in map.Cast<IndexedRow>()
-                                    where Regex.IsMatch(mp.Url, ix.Selector) && String.Equals(ix.Reference, mp.DocumentName, sc)
+                                    where Regex.IsMatch(mp.Url, ix.Selector) && String.Equals(ix.Reference, mp._type, sc)
                                     select new IndexedRow
                                     {
-                                        DocumentName = mp.DocumentName,
-                                        NodeKey = mp.NodeKey,
+                                        _type = mp._type,
+                                        _id = mp._id,
                                         Url = mp.Url,
                                         ItemKey = mp.ItemKey,                                        
                                         ItemValue = mp.ItemValue,
@@ -142,7 +142,7 @@ public partial class UserDefinedFunctions
         List<IndexedRow> arrayItems = new List<IndexedRow>();
         foreach (var r in filtered)
         {
-            var aitems = map.Where(kv => String.Equals(kv.NodeKey, r.NodeKey, sc)).ToList();
+            var aitems = map.Where(kv => String.Equals(kv._id, r._id, sc)).ToList();
             if (arrayItems.Count() > 0)
                 arrayItems.Union(aitems);
             else arrayItems = aitems;
@@ -194,9 +194,9 @@ public partial class UserDefinedFunctions
                         foreach (JsonMapSchema ms in s.MapIndex)
                         {
                             IncludedRow irow = new IncludedRow();
-                            irow.IncludedKey = "Include";
-                            irow.DocumentID = Guid.Empty.ToString();
-                            irow.DocumentName = ms.Reference;
+                            irow.nodeKey = "Include";
+                            irow._id = Guid.Empty.ToString();
+                            irow._type = ms.Reference;
                             include.Add(irow);
                         }
                     }
@@ -224,9 +224,9 @@ public partial class UserDefinedFunctions
                         foreach (JsonMergeSchema mgs in s.MergeIndex)
                         {
                             IncludedRow irow = new IncludedRow();
-                            irow.IncludedKey = "Include";
-                            irow.DocumentID = Guid.Empty.ToString();
-                            irow.DocumentName = mgs.SourceReference;
+                            irow.nodeKey = "Include";
+                            irow._id = Guid.Empty.ToString();
+                            irow._type = mgs.SourceReference;
                             include.Add(irow);
                         }
                     }
@@ -252,9 +252,9 @@ public partial class UserDefinedFunctions
                         foreach (JsonReduceSchema rs in s.ReduceIndex)
                         {
                             IncludedRow irow = new IncludedRow();
-                            irow.IncludedKey = "Include";
-                            irow.DocumentID = Guid.Empty.ToString();
-                            irow.DocumentName = rs.Reference;
+                            irow.nodeKey = "Include";
+                            irow._id = Guid.Empty.ToString();
+                            irow._type = rs.Reference;
                             include.Add(irow);
                         }
                     }

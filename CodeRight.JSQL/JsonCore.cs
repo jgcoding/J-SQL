@@ -11,6 +11,11 @@ using System.Text.RegularExpressions;
 
 public partial class UserDefinedFunctions
 {
+    /// <summary>
+    /// Returns a collection of documents referenced within a selection of JSON documents
+    /// </summary>
+    /// <param name="input">the document id of the document referenced</param>
+    /// <returns>IEnumerable</returns>
     [SqlFunction(FillRowMethodName = "IncludedRows",
     TableDefinition = "IncludedKey nvarchar(100), DocumentID uniqueidentifier")]
     public static IEnumerable SelectIncluded(String input)
@@ -20,26 +25,44 @@ public partial class UserDefinedFunctions
         return rows;
     }
 
-    private static void IncludedRows(Object row, out String IncludedKey, out Guid DocumentID)
+    /// <summary>
+    /// A strongly typed row object containing a document referenced within a parent document
+    /// </summary>
+    /// <param name="row">The row object returned within the result set of the CLR function</param>
+    /// <param name="nodeKey">The id of the node selected</param>
+    /// <param name="_id">The document id of the document referenced</param>
+    private static void IncludedRows(Object row, out String nodeKey, out Guid _id)
     {
         IncludedRow col = (IncludedRow)row;
-        IncludedKey = col.IncludedKey.ToString();
-        DocumentID = new Guid(col.DocumentID);
+        nodeKey = col.nodeKey.ToString();
+        _id = new Guid(col._id);
 
     }
 
+    /// <summary>
+    /// helper method for parsing and extracting the document id of documents referenced in a parent document
+    /// </summary>
+    /// <param name="input">The document id of the reference embedded within a parent document</param>
+    /// <param name="rows">The accumulated rows of documents retrieved using the references embedded in a parent document</param>
     private static void ParseInclusions(String input, ArrayList rows)
     {
         foreach (Match m in rxIncludedKey.Matches(input))
         {
             IncludedRow column = new IncludedRow
             {
-                IncludedKey = m.Groups["IncludedKey"].Value,
-                DocumentID = m.Groups["DocumentID"].Value
+                nodeKey = m.Groups["IncludedKey"].Value,
+                _id = m.Groups["DocumentID"].Value
             };
             rows.Add(column);
         }
     }
+
+    /// <summary>
+    /// Compares a url template provided with the template of each element in the selection to determine if they match. 
+    /// Serves as means for selecting elements matching certain criteria as in a WHERE clause
+    /// </summary>
+    /// <param name="url">The node address of an element within a document</param>
+    /// <returns>IEnumerable - Returns a list of elements matching the url template. </returns>
     public static IEnumerable CompareJsonUrl(String url)
     {
         ArrayList rows = new ArrayList();
@@ -66,6 +89,14 @@ public partial class UserDefinedFunctions
         }
         return rows;
     }
+
+    /// <summary>
+    /// Helper method used to dynamically construct either an OUTER APPLY or CROSS APPLY block. 
+    /// </summary>
+    /// <param name="query">Contains the partially constructed T-SQL query string to which an APPLY block may be added.</param>
+    /// <param name="p">Contains the select criteria</param>
+    /// <param name="pcount">Serves as an iterative terminator</param>
+    /// <returns>String containing the T_SQL query and APPLY block</returns>
     private static StringBuilder ApplyBlock(StringBuilder query, SelectionCriteria p, Int32 pcount)
     {
         if (pcount.Equals(1))
@@ -87,6 +118,13 @@ public partial class UserDefinedFunctions
         }
         return query;
     }
+
+    /// <summary>
+    /// Converts a JSON string containing selection criteria for a query and builds out the T-SQL statement 
+    /// necessary to achieve the results sought.
+    /// </summary>
+    /// <param name="json">The selection criteria for the query statement</param>
+    /// <returns>String</returns>
     private static String BuildSearchCriteria(String json)
     {
         /*parse the search criteria*/
@@ -172,15 +210,21 @@ public partial class UserDefinedFunctions
         return query.ToString();
     }
 
-    private static void MatchedViews(Object obj, out String DocumentID, out String DocumentView)
+    /// <summary>
+    /// Return result row object from a document view selection function
+    /// </summary>
+    /// <param name="obj">The row returned from the function</param>
+    /// <param name="_id">The document id of the view returned</param>
+    /// <param name="view">The view document returned</param>
+    private static void MatchedViews(Object obj, out String _id, out String view)
     {
         Object[] column = (Object[])obj;
-        DocumentID = (String)column[0];
-        DocumentView = (String)column[1];
+        _id = (String)column[0];
+        view = (String)column[1];
     }
 
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "MatchedViews",
-        TableDefinition = "DocumentID nvarchar(36), DocumentView nvarchar(max)")]
+        TableDefinition = "[_id] nvarchar(36), [view] nvarchar(max)")]
     public static IEnumerable CriteriaSearch(String json)
     {
         ArrayList rows = new ArrayList();
@@ -201,6 +245,13 @@ public partial class UserDefinedFunctions
         return rows;
     }
     
+    /// <summary>
+    /// returns a row containing the original value and the updated value resulting from an update of a document
+    /// </summary>
+    /// <param name="obj">The result row</param>
+    /// <param name="ItemKey">The item key included in the update</param>
+    /// <param name="Value_O">The original item value related to an item key included in an update</param>
+    /// <param name="Value_U">The new value related to the item key</param>
     private static void ItemUpdateView(Object obj, out String ItemKey, out String Value_O, out String Value_U)
     {
         Object[] column = (Object[])obj;
@@ -216,26 +267,36 @@ public partial class UserDefinedFunctions
         return Regex.IsMatch(json, value);
     }
 
+    /// <summary>
+    /// returns true for each element matching the criteria supplied.
+    /// </summary>
+    /// <param name="json">The JSON on which the match is applied</param>
+    /// <param name="value">The value used in the comparison</param>
+    /// <returns></returns>
     [SqlFunction()]
     public static Boolean rxContains(String json, String value)
     {
         return Regex.IsMatch(json, value);
     }
 
+    /// <summary>
+    /// extracts and selects the node key embedded in a collection of objects
+    /// </summary>
+    /// <param name="json"></param>
+    /// <returns></returns>
     [SqlFunction()]
     public static String SelectKey(String json)
     {
-        return rxKey.Match(json).Groups["ObjectID"].Value;
+        return rxKey.Match(json).Groups["nodeKey"].Value;
     }
 
-    private static void EntityUpdateView(Object obj, out String EntityType, out String EntityName, out String Action)
-    {
-        Object[] column = (Object[])obj;
-        EntityType = (String)column[0];
-        EntityName = (String)column[1];
-        Action = (String)column[2];
-    }
-
+    /// <summary>
+    /// returns a collection of urls merged as a result of two documents being combined or merged as one
+    /// </summary>
+    /// <param name="sourceUrl">The url of the element in the source document</param>
+    /// <param name="sourceKey">The item key of the element in the source document</param>
+    /// <param name="targetUrl">The url of the target element</param>
+    /// <returns></returns>
     [SqlFunction(FillRowMethodName = "MergedUrls",
         TableDefinition = "Url nvarchar(500), Selector nvarchar(500)")]
     public static IEnumerable MergeUrl(String sourceUrl, String sourceKey, String targetUrl)
@@ -248,6 +309,12 @@ public partial class UserDefinedFunctions
         return rows;
     }
 
+    /// <summary>
+    /// return object form the MergeUrl function
+    /// </summary>
+    /// <param name="obj">result row form the MergeUrl function</param>
+    /// <param name="Url">The newly merged url</param>
+    /// <param name="Selector">The selector used to locate matches</param>
     private static void MergedUrls(Object obj, out String Url, out String Selector)
     {
         Object[] column = (Object[])obj;
@@ -255,9 +322,13 @@ public partial class UserDefinedFunctions
         Selector = (String)column[1];
     }
 
+    /// <summary>
+    /// returns a collection of url row objects
+    /// </summary>
+    /// <param name="url">The url to be parsed or split into tabular format</param>
+    /// <returns>IEnumerable</returns>
     [SqlFunction(FillRowMethodName = "ParsedUrlRows",
     TableDefinition = "Generation int, NodeKey nvarchar(36), Node nvarchar(100)")]
-
     public static IEnumerable ParseUrl(String url)
     {
         ArrayList rows = new ArrayList();
@@ -289,6 +360,14 @@ public partial class UserDefinedFunctions
         }
         return rows;
     }
+
+    /// <summary>
+    /// The resulting row from a ParseUrl function call
+    /// </summary>
+    /// <param name="row">The url row</param>
+    /// <param name="Generation">The depth of the node from the root in which an element was located</param>
+    /// <param name="NodeKey">The node element's key id</param>
+    /// <param name="Node">The node element name or type</param>
     private static void ParsedUrlRows(Object row, out Int32 Generation, out String NodeKey, out String Node)
     {
         UrlAncestry col = (UrlAncestry)row;
@@ -297,6 +376,11 @@ public partial class UserDefinedFunctions
         Node = (String)(col.Node);
     }
 
+    /// <summary>
+    /// Parses JSON into a tabular format.
+    /// </summary>
+    /// <param name="json">The JSON to be parsed into a tabular format</param>
+    /// <returns>IEnumerable of JSON rows</returns>
     [SqlFunction(FillRowMethodName = "ParsedRows",
     TableDefinition = "ParentID int, ObjectID int, Url nvarchar(500), NodeKey nvarchar(50), Node nvarchar(100), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25), Selector nvarchar(500)")]
     public static IEnumerable RxJsonParse(String json)
@@ -305,10 +389,25 @@ public partial class UserDefinedFunctions
         JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, NodeKey = Guid.Empty.ToString(), Node = "root", ItemValue = json };
 
         var rows = ParseJson(root, 1);
-        root = new JsonRow { ParentID = 0, ObjectID = 1, NodeKey = Guid.Empty.ToString(), Node = "root", ItemValue = String.Empty, ItemType = "object" };
+        root = new JsonRow { ParentID = 0, ObjectID = 1, NodeKey = Guid.Empty.ToString(), Node = "root", ItemValue = String.Empty, ItemType = "object", Selector = "/" };
         rows.Add(root);
         return rows;
     }
+
+    /// <summary>
+    /// The strongly typed row result object from a RxJsonParse call
+    /// </summary>
+    /// <param name="row">The JsonRow containing the parsed values of a JSON element or node</param>
+    /// <param name="ParentID">The temporary id number of the parsed elements parent</param>
+    /// <param name="ObjectID">The temporary id of the node</param>
+    /// <param name="Url">The tree node bread-crumb reference to the parsed element</param>
+    /// <param name="NodeKey">The primary key to which an element is linked</param>
+    /// <param name="Node">The name of the object in which an element resides. Includes the object itself</param>
+    /// <param name="ItemKey">The item key in a key-value pairing</param>
+    /// <param name="ItemValue">The item value in a key-value pairing</param>
+    /// <param name="ItemType">The item type in a key-value pairing</param>
+    /// <param name="Selector">A mask by which elements may be selected using various degrees of resolution. 
+    /// Serves the same purpose as a WHERE clause template. </param>
     private static void ParsedRows(Object row, out Int32 ParentID, out Int32 ObjectID,
     out String Url, out String NodeKey, out String Node, out String ItemKey, out String ItemValue, out String ItemType, out String Selector)
     {
@@ -321,7 +420,7 @@ public partial class UserDefinedFunctions
         ItemKey = (String)(col.ItemKey);
         ItemValue = (String)(col.ItemValue);
         ItemType = (String)(col.ItemType);
-        Selector = (String)(col.Selector);
+        Selector = TemplateJsonUrl(Url);
     }
 
     private static List<JsonRow> ParseJson(JsonRow eroot, Int32 newID)
@@ -401,7 +500,7 @@ public partial class UserDefinedFunctions
             /*nulls*/
             else if (row.ItemValue == null)
                 row.ItemType = "null";
-
+            
             /*add the parsed element to the output collection*/
             rows.Add(row);
         }
@@ -530,11 +629,18 @@ public partial class UserDefinedFunctions
             }
         }
         rows.AddRange(irows);
+        /*retrieve the last ObjectID from the inner collection*/
         newID = NewID(rows, irows);
 
         return rows;
     }
 
+    /// <summary>
+    /// returns the last ObjectID from the inner collection
+    /// </summary>
+    /// <param name="orows">The collection of outer rows</param>
+    /// <param name="irows">The collection of inner rows</param>
+    /// <returns>Int32</returns>
     public static Int32 NewID(List<JsonRow> orows, List<JsonRow> irows)
     {
         Int32 outerID = orows.Count > 0 ? orows.Cast<JsonRow>().Max(oid => oid.ObjectID) : 0;
@@ -552,8 +658,7 @@ public partial class UserDefinedFunctions
     /// "ItemKey" is the key in the key/value pair of any Json element.
     /// </summary>
     /// <param name="url">JsonUrl for a parsed Json element</param>
-    //[SqlFunction()]
-
+    [SqlFunction()]
     public static String TemplateJsonUrl(String url)
     {
         StringBuilder template = new StringBuilder();

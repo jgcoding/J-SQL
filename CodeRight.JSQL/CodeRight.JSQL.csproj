@@ -63,6 +63,8 @@
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Set-up\Create Document store.sql" />
+    <Content Include="Set-up\Create Utilities table.sql" />
     <Content Include="Test Scripts\Test.sql">
       <SubType>Content</SubType>
     </Content>

@@ -73,9 +73,9 @@ public partial class UserDefinedFunctions
     }
     public class IndexedRow
     {
-        public String DocumentName { get; set; }
+        public String _type { get; set; }
         public String IncludedKey { get; set; }
-        public String NodeKey { get; set; }
+        public String _id { get; set; }
         public String Url { get; set; }
         public String ItemKey { get; set; }
         public String ItemValue { get; set; }
@@ -94,11 +94,11 @@ public partial class UserDefinedFunctions
 
     public struct IncludedRow
     {
-        public String IncludedKey;
-        public String DocumentID;
-        public String Document;
-        public String DocumentName;
-        public int PublicDocumentID;
+        public String nodeKey;
+        public String _id;
+        public String document;
+        public String _type;
+        public int internalId;
     }
 
     public class JsonMapSchema

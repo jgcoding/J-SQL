@@ -21,7 +21,7 @@ GO
 CREATE FUNCTION [dbo].[SelectIncluded](@input [nvarchar](max))
 RETURNS  TABLE (
 	[IncludedKey] [nvarchar](100) NULL,
-	[DocumentID] [uniqueidentifier] NULL
+	[_id] [uniqueidentifier] NULL
 ) WITH EXECUTE AS CALLER
 AS 
 EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[SelectIncluded]
@@ -116,6 +116,25 @@ RETURNS  TABLE (
 ) WITH EXECUTE AS CALLER
 EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ParseUrl]
 GO
+
+/****** Object:  UserDefinedFunction [dbo].[CriteriaSearch]    Script Date: 05/18/2013 15:25:42 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CriteriaSearch]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[CriteriaSearch]
+GO
+
+USE [Utilities]
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[CriteriaSearch]    Script Date: 05/18/2013 15:25:42 ******/
+CREATE FUNCTION [dbo].[CriteriaSearch](@json [nvarchar](4000))
+RETURNS  TABLE (
+	[_id] [nvarchar](36) NULL,
+	[view] [nvarchar](max) NULL
+) WITH EXECUTE AS CALLER
+AS 
+EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[CriteriaSearch]
+GO
+
 --/****** Object:  UserDefinedFunction [dbo].[rxIndexJson]    Script Date: 12/23/2011 08:52:57 ******/
 --IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[RxIndexJson]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
 --DROP FUNCTION [dbo].[RxIndexJson]

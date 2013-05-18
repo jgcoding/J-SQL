@@ -14,33 +14,60 @@ using System.Globalization;
 using WebRight.Serialization;
 
 public partial class UserDefinedFunctions
-{
-    //manage sql injection attacks
+{    
+    /// <summary>
+    /// Examines a fully qualified SQL object and the columns to be included in the operation for key words utilized in SQL injection attacks. 
+    /// </summary>
+    /// <param name="objName">The fully qualified name of the database object on which the query is to be executed as a parsed array of strings. (i.e. database.schema.table) </param>
+    /// <param name="cols">String: a concatenated string of columns to be examined for illegal values known to be used in SQL injection attacks.</param>
+    /// <returns>String - A JSON-formatted result containing details of any threats discovered from the analysis.</returns>
     private static String blockSqlInjection(String[] objName, String cols)
     {
         String err = String.Empty;
         if (objName.Count() < 3)
+        {
             err = "{\"InvalidInputError\":\"A fully qualified view, table, or function name must be supplied.(i.e. database.schema.table\"}";
-        
+        }
+
         if (cols.Contains("DROP ") | cols.Contains("DELETE ") | cols.Contains("CREATE ") | cols.Contains("ALTER "))
+        {
             err = "{\"InvalidDDLError\":\"Objects may not be created, deleted, or destroyed.\"}";
+        }
 
         if (objName.Contains("master") | objName.Contains("model") | objName.Contains("msdb") | objName.Contains("tempdb"))
+        {
             err = "{\"InvalidResourceError\":\"System databases may not be referenced within this query.\"}";
+        }
         return err;
     }
-    //manage sql injection attacks
+
+    /// <summary>
+    /// Examines the columns to be included in the operation for key words utilized in SQL injection attacks. 
+    /// </summary>
+    /// <param name="cols">String: a concatenated string of columns to be examined for illegal values known to be used in SQL injection attacks.</param>
+    /// <returns>String - A JSON-formatted result containing details of any threats discovered from the analysis.</returns>
     private static String blockSqlInjection(String query)
     {
         String err = String.Empty;
         if (query.Contains("drop ") | query.Contains("delete ") | query.Contains("create ") | query.Contains("alter ") | query.Contains("insert ") | query.Contains("update "))
+        {
             err = "{\"InvalidDDLError\":\"create, delete, update, insert, or drop not permitted with this function.\"}";
+        }
 
         if (query.Contains("model") | query.Contains("msdb") | query.Contains("tempdb"))
+        {
             err = "{\"InvalidResourceError\":\"System databases may not be referenced within this query.\"}";
+        }
         return err;
     }
-    //construct the core query header
+    
+    /// <summary>
+    /// construct the core query header
+    /// </summary>
+    /// <param name="objName">database source on which an operation is to be executed.</param>
+    /// <param name="criteria">The criteria to be used to customize the selection or result</param>
+    /// <param name="cols">The columns to be included in the result or in the operation</param>
+    /// <returns></returns>
     private static StringBuilder buildQueryString(String objName, String criteria, String cols)
     {
         StringBuilder sql = new StringBuilder();
@@ -59,7 +86,11 @@ public partial class UserDefinedFunctions
         return sql;     
     }
 
-    //construct and manage sql server error messages
+    /// <summary>
+    /// construct and manage sql server error messages
+    /// </summary>
+    /// <param name="sqlex">The SqlException thrown to be formatted into JSON</param>
+    /// <returns>A JSON-stringified SqlException</returns>
     private static String sqlErrorMessage(SqlException sqlex)
     {
         StringBuilder sqlerr = new StringBuilder();
@@ -74,6 +105,12 @@ public partial class UserDefinedFunctions
         return sqlerr.ToString();
     }
    
+    /// <summary>
+    /// Converts a result set returned from SQL Server into JSON formatted array of objects and values
+    /// </summary>
+    /// <param name="row">A SQL row return from any SQL Set-based operation</param>
+    /// <param name="ItemID">The unique identifier for the row. The row key.</param>
+    /// <param name="Json">The output result as a JSON formatted string</param>
     public static void StringifiedRows(object row, out SqlGuid ItemID, out SqlString Json)
     {
         //this method receives the 'row' object returned from the JsonToTable function above and inserts
@@ -82,6 +119,10 @@ public partial class UserDefinedFunctions
         ItemID = (SqlGuid)(col.ItemID);
         Json = (SqlString)(col.Json);
     }
+
+    /// <summary>
+    /// A structure for organizing stringified rows of JSON
+    /// </summary>
     public struct StringifiedRow
     {
         public Guid ItemID;
@@ -93,6 +134,12 @@ public partial class UserDefinedFunctions
         }
     }
     
+    /// <summary>
+    /// Serves the same purpose as SqlStringifyRow2 but obtains the row values internally and directly via the connection context.
+    /// </summary>
+    /// <param name="docid">The document ID for each row to be selected and stringified</param>
+    /// <param name="query">The query parameters to included in filtering the result set.</param>
+    /// <returns></returns>
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "StringifiedRows",
       TableDefinition = "DocumentID uniqueidentifier, Document NVARCHAR(MAX)")]
     public static IEnumerable SqlStringifyRow2(SqlGuid docid, SqlString query)
@@ -139,6 +186,16 @@ public partial class UserDefinedFunctions
         return srows;
     }
 
+    /// <summary>
+    /// Returns a row resulting from the parameterized query elements provided formatted as JSON
+    /// </summary>
+    /// <param name="objName">database source on which an operation is to be executed.</param>
+    /// <param name="pKeyName">The column name serving as the primary key</param>
+    /// <param name="pKeyValue">The value of the primary key for the result set</param>
+    /// <param name="cols">The columns to be included in the operation</param>
+    /// <param name="where">The WHERE clause string to be applied to the operation</param>
+    /// <param name="misc">Miscellaneous criteria, such as GROUP BY, HAVING or any other valid SQL operator. </param>
+    /// <returns></returns>
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "StringifiedRows",
       TableDefinition = "ItemID uniqueidentifier, ItemValue NVARCHAR(MAX)")]
     public static IEnumerable SqlStringifyRow(String objName, String pKeyName, SqlGuid pKeyValue, String cols, String where, String misc)
@@ -200,7 +257,15 @@ public partial class UserDefinedFunctions
         }
         return srows;
     }
-
+        
+    /// <summary>
+    /// Returns a concatenated string containing the stringified column names and column values of a r
+    /// </summary>
+    /// <param name="objName">database source on which an operation is to be executed.</param>
+    /// <param name="cols">The columns to be included in the operation</param>
+    /// <param name="alias">Any valid column alias</param>
+    /// <param name="nullable">true if columns with null values should be included in the result</param>
+    /// <returns>String</returns>
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read)]
     public static SqlString ConcatFormatColumns(SqlString objName, SqlString cols, SqlString alias, SqlBoolean nullable)
     {
@@ -240,12 +305,26 @@ public partial class UserDefinedFunctions
         return jformat.ToString();
     }
 
+    /// <summary>
+    /// Proxy method linking to the Utilities.StringifyColumn function
+    /// </summary>
+    /// <param name="key">The column name</param>
+    /// <param name="value">The column value</param>
+    /// <param name="dt">The column data type</param>
+    /// <returns>String</returns>
     [SqlFunction()]
     public static String StringifySqlColumn(String key, String value, String dt)
     {
         return Utilities.StringifyColumn(key, value, dt);
     }
 
+    /// <summary>
+    /// Returns the result of a set-based operation as an array of JSON
+    /// </summary>
+    /// <param name="objName">database source on which an operation is to be executed.</param>    
+    /// <param name="criteria">The text of any valid SQL operator used to affect the results</param>
+    /// <param name="cols">The columns to be included in the operation</param>
+    /// <returns>SqlString</returns>
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read)]
     public static SqlString SqlStringifySet(String objName, String criteria, String cols)
     {
@@ -313,7 +392,12 @@ public partial class UserDefinedFunctions
     }
     
 
-    //format the incoming column for json
+    /// <summary>
+    /// Converts an individual SqlDataReader row referenced by its column index integer into JSON
+    /// </summary>
+    /// <param name="dr">SqlDataReader - the row returned from the SQL select operation</param>
+    /// <param name="colno">The column index used to look up the column meta-data</param>
+    /// <returns>String</returns>
     public static String JsonFormat(SqlDataReader dr, Int32 colno)
     {
         String result = String.Empty;
