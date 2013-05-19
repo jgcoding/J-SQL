@@ -11,8 +11,6 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using System.Globalization;
 
-using WebRight.Serialization;
-
 public partial class UserDefinedFunctions
 {    
     /// <summary>
@@ -283,7 +281,7 @@ public partial class UserDefinedFunctions
                     jformat.Append("SELECT '{'+");
                     for (Int32 i = 0; i < dr.FieldCount; i++)
                     {
-                        jformat.AppendFormat("{0}", Utilities.FormatColumnForJson(dr.GetName(i).ToString(), dr.GetDataTypeName(i).ToLower(), String.IsNullOrEmpty(alias.Value) ? String.Empty : alias.Value, nullable.Value));                            
+                        jformat.AppendFormat("{0}", FormatColumnForJson(dr.GetName(i).ToString(), dr.GetDataTypeName(i).ToLower(), String.IsNullOrEmpty(alias.Value) ? String.Empty : alias.Value, nullable.Value));                            
                     }
                     String token = jformat.ToString().Substring(jformat.Length - 1, 1);
                     while (token.Equals("+")|token.Equals(",")|token.Equals("'"))
@@ -303,19 +301,6 @@ public partial class UserDefinedFunctions
         }
 
         return jformat.ToString();
-    }
-
-    /// <summary>
-    /// Proxy method linking to the Utilities.StringifyColumn function
-    /// </summary>
-    /// <param name="key">The column name</param>
-    /// <param name="value">The column value</param>
-    /// <param name="dt">The column data type</param>
-    /// <returns>String</returns>
-    [SqlFunction()]
-    public static String StringifySqlColumn(String key, String value, String dt)
-    {
-        return Utilities.StringifyColumn(key, value, dt);
     }
 
     /// <summary>
@@ -412,7 +397,9 @@ public partial class UserDefinedFunctions
                 else {
                     CultureInfo ci = CultureInfo.InvariantCulture;
                     DateTime rdate = DateTime.Parse(sval);
-                    result = string.Format("\"{0}\":\"{1}\"", dr.GetName(colno), rdate.ToString("MM/dd/yyyy HH:mm:ss.FFF", ci.DateTimeFormat));
+                    //result = string.Format("\"{0}\":\"{1}\"", dr.GetName(colno), rdate.ToString("MM/dd/yyyy HH:mm:ss.FFF", ci.DateTimeFormat));
+                    // format to JavaScript DateTime formatting
+                    result = String.Format("\"{0}\":new Date({1})", dr.GetName(colno), ToUnixTime(rdate));
                 }
                 break;
             case "varchar":
@@ -447,7 +434,7 @@ public partial class UserDefinedFunctions
                     result = sval;
                 }
                 else 
-                    result = string.Format("\"{0}\":\"{1}\"", dr.GetName(colno), Utilities.JsonEscape(sval));
+                    result = string.Format("\"{0}\":\"{1}\"", dr.GetName(colno), JsonEscape(sval));
                 break;
             case "int":
             case "smallint":

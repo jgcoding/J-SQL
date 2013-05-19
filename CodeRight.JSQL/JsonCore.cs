@@ -647,7 +647,7 @@ public partial class UserDefinedFunctions
         Int32 nestedID = irows.Count > 0 ? irows.Cast<JsonRow>().Max(oid => oid.ObjectID) : 0;
         return nestedID > outerID ? nestedID : outerID;
     }
-
+        
     /// <summary>
     /// Each Group item represents a named capture group defined in the pattern. 
     /// This function can be used to parse and re-assemble each url into a template used in indexing by replacing each 
