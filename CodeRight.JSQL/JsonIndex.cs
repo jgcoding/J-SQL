@@ -16,7 +16,7 @@ public partial class UserDefinedFunctions
     public static IEnumerable MapJsonIndex(String docname, String json, IEnumerable filters)
     {
         /*parse the Document*/
-        var documentInfo = RxJsonParse(json).Cast<JsonRow>().Where(d => !String.Equals(d.ItemType, "array"));
+        var documentInfo = rxJsonParse(json).Cast<JsonRow>().Where(d => !String.Equals(d.ItemType, "array"));
 
         /*map the elements to their index pattern.*/
         var step1 = (from f in filters.Cast<JsonMapSchema>()
@@ -25,7 +25,6 @@ public partial class UserDefinedFunctions
                      select new IndexedRow
                      {
                          _type = docname,
-                         _id = di.NodeKey,
                          Url = di.Url,
                          ItemKey = di.ItemKey,
                          ItemValue = di.ItemValue,

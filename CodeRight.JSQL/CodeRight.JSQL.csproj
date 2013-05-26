@@ -65,6 +65,7 @@
   <ItemGroup>
     <Content Include="Set-up\Create Document store.sql" />
     <Content Include="Set-up\Create Utilities table.sql" />
+    <Content Include="Test Scripts\JSON Test 05252013.sql" />
     <Content Include="Test Scripts\Test.sql">
       <SubType>Content</SubType>
     </Content>
@@ -74,6 +75,7 @@
     <Content Include="PostDeployScript.sql">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Test Scripts\Test1.sql" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

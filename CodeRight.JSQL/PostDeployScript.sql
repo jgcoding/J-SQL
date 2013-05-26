@@ -27,26 +27,24 @@ AS
 EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[SelectIncluded]
 GO
 
-/****** Object:  UserDefinedFunction [dbo].[RxJsonParse]    Script Date: 11/13/2011 16:05:07 ******/
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[RxJsonParse]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
-DROP FUNCTION [dbo].[RxJsonParse]
+/****** Object:  UserDefinedFunction [dbo].[rxJsonParse]    Script Date: 11/13/2011 16:05:07 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[rxJsonParse]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[rxJsonParse]
 GO
 
-/****** Object:  UserDefinedFunction [dbo].[RxJsonParse]    Script Date: 11/13/2011 16:05:07 ******/
-CREATE FUNCTION [dbo].[RxJsonParse](@json [nvarchar](max))
+/****** Object:  UserDefinedFunction [dbo].[rxJsonParse]    Script Date: 11/13/2011 16:05:07 ******/
+CREATE FUNCTION [dbo].[rxJsonParse](@json [nvarchar](max))
 RETURNS  TABLE (
 	[ParentID] [int] NULL,
 	[ObjectID] [int] NULL,
 	[Url] [nvarchar](500) NULL,
-	[NodeKey] [nvarchar](50) NULL,
 	[Node] [nvarchar](100) NULL,
 	[ItemKey] [nvarchar](500) NULL,
 	[ItemValue] [nvarchar](max) NULL,
-	[ItemType] [nvarchar](25) NULL,
-	[Selector] [nvarchar](500) NULL
+	[ItemType] [nvarchar](25) NULL
 ) WITH EXECUTE AS CALLER
 AS 
-EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[RxJsonParse]
+EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[rxJsonParse]
 GO
 
 /****** Object:  UserDefinedFunction [dbo].[rxContains]    Script Date: 02/06/2012 08:12:45 ******/

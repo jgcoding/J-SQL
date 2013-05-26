@@ -128,7 +128,7 @@ public partial class UserDefinedFunctions
     private static String BuildSearchCriteria(String json)
     {
         /*parse the search criteria*/
-        var criteria = RxJsonParse(json).Cast<JsonRow>().Where(w => !String.IsNullOrEmpty(w.ItemValue)).ToList();
+        var criteria = rxJsonParse(json).Cast<JsonRow>().Where(w => !String.IsNullOrEmpty(w.ItemValue)).ToList();
 
         /*select the view name*/
         String viewName = criteria.First(v => String.Equals(v.ItemKey, "EntityType")).ItemValue;
@@ -382,63 +382,65 @@ public partial class UserDefinedFunctions
     /// <param name="json">The JSON to be parsed into a tabular format</param>
     /// <returns>IEnumerable of JSON rows</returns>
     [SqlFunction(FillRowMethodName = "ParsedRows",
-    TableDefinition = "ParentID int, ObjectID int, Url nvarchar(500), NodeKey nvarchar(50), Node nvarchar(100), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25), Selector nvarchar(500)")]
-    public static IEnumerable RxJsonParse(String json)
+    TableDefinition = "ParentID int, ObjectID int, Url nvarchar(500), Node nvarchar(100), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25)")]
+    public static IEnumerable rxJsonParse(String json)
     {
         /*initialize the collection with the root containing the entire json object*/
-        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, NodeKey = Guid.Empty.ToString(), Node = "root", ItemValue = json };
+        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, Node = "root", ItemValue = json };
 
         var rows = ParseJson(root, 1);
-        root = new JsonRow { ParentID = 0, ObjectID = 1, NodeKey = Guid.Empty.ToString(), Node = "root", ItemValue = String.Empty, ItemType = "object", Selector = "/" };
+        root = new JsonRow { ParentID = 0, ObjectID = 1, Node = "root", ItemValue = String.Empty, ItemType = "object"};
         rows.Add(root);
         return rows;
     }
 
     /// <summary>
-    /// The strongly typed row result object from a RxJsonParse call
+    /// The strongly typed row result object from a rxJsonParse call
     /// </summary>
     /// <param name="row">The JsonRow containing the parsed values of a JSON element or node</param>
     /// <param name="ParentID">The temporary id number of the parsed elements parent</param>
     /// <param name="ObjectID">The temporary id of the node</param>
     /// <param name="Url">The tree node bread-crumb reference to the parsed element</param>
-    /// <param name="NodeKey">The primary key to which an element is linked</param>
     /// <param name="Node">The name of the object in which an element resides. Includes the object itself</param>
     /// <param name="ItemKey">The item key in a key-value pairing</param>
     /// <param name="ItemValue">The item value in a key-value pairing</param>
     /// <param name="ItemType">The item type in a key-value pairing</param>
-    /// <param name="Selector">A mask by which elements may be selected using various degrees of resolution. 
     /// Serves the same purpose as a WHERE clause template. </param>
     private static void ParsedRows(Object row, out Int32 ParentID, out Int32 ObjectID,
-    out String Url, out String NodeKey, out String Node, out String ItemKey, out String ItemValue, out String ItemType, out String Selector)
+    out String Url, out String Node, out String ItemKey, out String ItemValue, out String ItemType)
     {
         JsonRow col = (JsonRow)row;
         ParentID = (Int32)(col.ParentID);
         ObjectID = (Int32)(col.ObjectID);
         Url = (String)(col.Url);
-        NodeKey = (String)(col.NodeKey);
         Node = (String)(col.Node);
         ItemKey = (String)(col.ItemKey);
         ItemValue = (String)(col.ItemValue);
         ItemType = (String)(col.ItemType);
-        Selector = TemplateJsonUrl(Url);
     }
 
+    /// <summary>
+    /// Returns a list of strongly-typed row objects
+    /// </summary>
+    /// <param name="eroot">A strongly-type row </param>
+    /// <param name="newID">The id of the parent node</param>
+    /// <returns></returns>
     private static List<JsonRow> ParseJson(JsonRow eroot, Int32 newID)
     {
         // list of rows
         List<JsonRow> rows = new List<JsonRow>();
 
-        // list of nested rows within the rows
+        // list of nested rows within the row
         List<JsonRow> irows = new List<JsonRow>();
 
         if (eroot.ItemValue.StartsWith("{"))
         {
-            // this is an object
+            // the element is an object
             eroot.ItemValue = eroot.ItemValue.Substring(1, eroot.ItemValue.Length - 2);
         }
         else if (eroot.ItemValue.StartsWith("["))
         {
-            // this is an array
+            // the element is an array
             eroot.ItemValue = eroot.ItemValue.Substring(1, eroot.ItemValue.Length - 2);
         }
         else
@@ -452,7 +454,6 @@ public partial class UserDefinedFunctions
             {
                 ParentID = eroot.ParentID,
                 ObjectID = 0,
-                NodeKey = eroot.NodeKey,
                 Node = eroot.Node,
                 ItemKey = m.Groups["ItemKey"].Value,
                 ItemValue = m.Groups["ItemValue"].Value
@@ -462,18 +463,17 @@ public partial class UserDefinedFunctions
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.ItemValue.Equals("\"\""))
+                {
                     row.ItemValue = String.Empty;
+                }
                 else
+                {
                     /*remove quotes from the value*/
                     row.ItemValue = row.ItemValue.Substring(1, row.ItemValue.Length - 2);
-
-                /*determine if the element is keyed, updating the object key if it is*/
-                if (rxKey.IsMatch(m.Value))
-                {
-                    eroot.NodeKey = rxKey.Match(m.Value).Groups["ObjectID"].Value;
                 }
                 row.ItemType = "string";
             }
+            /*array*/
             else if (row.ItemValue.StartsWith("[") | row.ItemValue.StartsWith("\"@"))
             {
                 /*increment the newID*/
@@ -481,6 +481,7 @@ public partial class UserDefinedFunctions
                 row.ObjectID = newID;
                 row.ItemType = "array";
             }
+            /*object*/
             else if (row.ItemValue.StartsWith("{"))
             {
                 /*increment the newID*/
@@ -490,39 +491,43 @@ public partial class UserDefinedFunctions
             }
             /*boolean*/
             else if (String.Equals(row.ItemValue, "true", sc) | String.Equals(row.ItemValue, "false", sc))
+            {
                 row.ItemType = "bool";
+            }
             /*floats*/
             else if (Regex.IsMatch(row.ItemValue, "^-{0,1}\\d*\\.[\\d]+$") && !String.Equals(row.ItemType, "string", sc))
+            {
                 row.ItemType = "float";
+            }
             /*int*/
             else if (Regex.IsMatch(row.ItemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$") && !String.Equals(row.ItemType, "string", sc))
+            {
                 row.ItemType = "int";
+            }
             /*nulls*/
             else if (row.ItemValue == null)
+            {
                 row.ItemType = "null";
+            }
             
             /*add the parsed element to the output collection*/
             rows.Add(row);
         }
 
-        /*update each element in the object with object's key and url*/
+        /* double back and handle the array and/or the object rows as the ancestry and hierarchy is established*/
         foreach (JsonRow r in rows)
-        {
-            /*update the key*/
-            r.NodeKey = eroot.NodeKey;
-
+        {            
             /*update the url*/
-            if (String.IsNullOrEmpty(eroot.Url) | eroot.Url.Equals("/"))
-                r.Url = String.Format("/{0}", r.ItemKey);
-            else
-                r.Url = r.NodeKey.CompareString().Equals(Guid.Empty.ToString()) ? String.Format("{0}/{1}", eroot.Url, r.ItemKey) : String.Format("{0}:{1}/{2}", eroot.Url, r.NodeKey, r.ItemKey);
+            r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
 
+            // double back and handle the array and/or the object rows
             switch (r.ItemType.CompareString())
             {
                 case "array":
                     List<JsonRow> iobj = new List<JsonRow>();
                     if (r.ItemValue.StartsWith("[{") && rxParseArrayOfObjects.IsMatch(r.ItemValue))
                     {
+                        Int32 oIndex = 0;
                         foreach (Match o in rxParseArrayOfObjects.Matches(r.ItemValue))
                         {
                             newID++;/*increment the objectID*/
@@ -530,8 +535,7 @@ public partial class UserDefinedFunctions
                             JsonRow aroot = new JsonRow();
                             aroot.ParentID = r.ObjectID;
                             aroot.ObjectID = newID;
-                            aroot.NodeKey = r.NodeKey;
-                            aroot.Url = r.Url;
+                            aroot.Url = String.Format("{0}[{1}]", r.Url, oIndex);
                             aroot.Node = r.ItemKey;
                             aroot.ItemKey = r.ItemKey;
                             aroot.ItemValue = o.Value;
@@ -539,6 +543,7 @@ public partial class UserDefinedFunctions
 
                             /*add the nested parent array object*/
                             iobj.Add(aroot);
+                            oIndex++;
                         }
                         irows.AddRange(iobj);
                         foreach (JsonRow aorow in iobj)
@@ -547,7 +552,6 @@ public partial class UserDefinedFunctions
                             JsonRow aoroot = new JsonRow();
                             aoroot.ParentID = aorow.ObjectID;
                             aoroot.ObjectID = newID;
-                            aoroot.NodeKey = Guid.Empty.ToString();
                             aoroot.Url = aorow.Url;
                             aoroot.Node = aorow.ItemKey;
                             aoroot.ItemKey = aorow.ItemKey;
@@ -560,13 +564,12 @@ public partial class UserDefinedFunctions
                             newID = NewID(rows, irows);
                         }
                     }
+                    /*process simple arrays*/
                     else if (r.ItemValue.StartsWith("[") && !r.ItemValue.StartsWith("[{"))
                     {
                         /*verify this isn't an empty array*/
                         if (!r.ItemValue.Equals("[]"))
                         {
-                            /*remove the outer array braces*/
-                            //String simpleArray = r.ItemValue.Substring(1, r.ItemValue.Length - 2);
                             /*initialize the array element counter*/
                             Int32 ai = 0;
                             List<String> items = new List<String>();
@@ -575,32 +578,33 @@ public partial class UserDefinedFunctions
                             if (rxSimpleStringArray.IsMatch(r.ItemValue))
                             {
                                 foreach (Match s in rxSimpleStringArray.Matches(r.ItemValue))
+                                {
                                     items.Add(s.Groups["ArrayItem"].Value);
+                                }
                                 itype = "string";
                             }
                             else if (rxSimpleNumericArray.IsMatch(r.ItemValue))
                             {
                                 foreach (Match s in rxSimpleNumericArray.Matches(r.ItemValue))
+                                {
                                     items.Add(s.Groups["ArrayItem"].Value);
+                                }
                                 itype = "float";
                             }
                             foreach (String item in items)
                             {
-                                //newID++;/*increment the objectID*/
-                                ai++;/*increment the array item index*/
                                 /*add the nested parent array object*/
                                 JsonRow sa = new JsonRow();
                                 sa.ParentID = r.ObjectID;
                                 sa.ObjectID = 0;
-                                sa.NodeKey = r.NodeKey;
-                                sa.Url = String.Concat(r.Url, "/", ai);
+                                sa.Url = String.Format("{0}[{1}]", r.Url, ai);
                                 sa.Node = r.ItemKey;
-                                sa.ItemKey = null;
+                                sa.ItemKey = null;// String.Format("[{0}]", ai);
                                 sa.ItemValue = item;
                                 sa.ItemType = itype;
-
                                 /*add the nested parent array object*/
                                 iobj.Add(sa);
+                                ai++;/*increment the array item index*/
                             }
                             irows.AddRange(iobj);
                         }
@@ -612,7 +616,6 @@ public partial class UserDefinedFunctions
                     JsonRow oroot = new JsonRow();
                     oroot.ParentID = r.ObjectID;
                     oroot.ObjectID = newID;
-                    oroot.NodeKey = r.NodeKey;
                     oroot.Url = r.Url;
                     oroot.Node = r.ItemKey;
                     oroot.ItemKey = r.ItemKey;
@@ -674,14 +677,17 @@ public partial class UserDefinedFunctions
                 {
                     /*If this is a captured Node from the Url.*/
                     if (String.Equals(s, "node", sc))
-                        template.AppendFormat("/{0}:{1}", cap.Value, "{0}");
+                    {
+                        template.AppendFormat(".{0}[{1}]", cap.Value, "{0}");
+                    }
                     /*If this is a captured ItemKey from the Url.*/
                     if (String.Equals(s, "itemkey", sc))
-                        template.AppendFormat("/{0}", cap.Value);
+                    {
+                        template.AppendFormat(".{0}", cap.Value);
+                    }
                 }
             }
         }
         return template.ToString();
     }
-
 }

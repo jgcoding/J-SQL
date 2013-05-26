@@ -47,10 +47,9 @@ public partial class UserDefinedFunctions
             this.ParentID = 0;
             this.ObjectID = 1;
             this.Command = "select";
-            this.Url = "/";
+            this.Url = "root";
             this.Node = "root";
             this.KeyColumn = "NA";
-            this.NodeKey = Guid.Empty.ToString();
             this.ItemType = "object";
             this.IsVisible = true;
             this.IsDirty = false;

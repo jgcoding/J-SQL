@@ -37,23 +37,7 @@ public partial class UserDefinedFunctions
         }
         return irow;
     }
-
-    /// <summary>
-    /// Returns a collection of documents selected and any documents referenced within each selected document. (known as inclusions)
-    /// </summary>
-    /// <param name="endpoint">The location of the document store</param>
-    /// <param name="_id">The id of the document to be selected</param>
-    /// <param name="include">a list of documents referenced within documents selected</param>
-    /// <returns>IEnumerable</returns>
-    public static IEnumerable ClrJsonIncludes(String endpoint, Guid _id, ArrayList include)
-    {
-        var document = ClrRetrieveDocument(endpoint, _id.ToString());
-        ArrayList documents = new ArrayList();
-        documents.AddRange(ProcessInclusions(endpoint, document, include).Cast<IncludedRow>().Where(w => !String.Equals(w.nodeKey, "include", sc) && !String.Equals(w.document, "exclude", sc)).ToList());
-        documents.Add(document);
-        return documents;
-    }
-
+        
     /// <summary>
     /// Container for rows of JSON documents stored in a document store
     /// </summary>
@@ -62,116 +46,13 @@ public partial class UserDefinedFunctions
     /// <param name="document">The JSON document</param>
     /// <param name="_type">The document name or type</param>
     /// <param name="nodekey">The primary key for each node within the documents returned</param>
-    private static void DocumentRows(Object row, out String _id, out String document, out String _type, out String nodekey)
+    private static void DocumentRows(Object row, out String _id, out String document, out String _type/*, out String nodekey*/)
     {
         IncludedRow col = (IncludedRow)row;
         _id = (String)(col._id);
         document = (String)(col.document);
         _type = (String)(col._type);
-        nodekey = (String)(col.nodeKey);
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="endpoint">The endpoint for the document store and the index store</param>
-    /// <param name="_id">The document's unique id</param>
-    /// <param name="index"></param>
-    /// <returns></returns>
-    [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "JsonIndexRows",
-    TableDefinition = "DocumentName nvarchar(100), NodeKey nvarchar(36), Url nvarchar(500), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25), Label nvarchar(100),  Selector nvarchar(500), IsVisible bit")]
-    public static IEnumerable IndexJson(String endpoint, String _id, String index)
-    {
-        /*retrieve the index schema*/
-        String ixschema = IndexSchemaFetch(endpoint, index, true).Cast<IndexRow>().FirstOrDefault(ix => !String.IsNullOrEmpty(ix.IndexSchema)).IndexSchema;
-
-        if (String.IsNullOrEmpty(ixschema))
-            ixschema = index;
-
-        JsonIndexSchema s = new JsonIndexSchema();
-        s = ParseJsonIndex(ixschema);
-
-        /*retrieve the document and all inclusions*/
-
-        var documents = ClrJsonIncludes(endpoint, new Guid(_id), s.Include).Cast<IncludedRow>().Where(d => !String.Equals(d.document, "exclude", sc)).Distinct();
-
-        /*map element selectors within each document in the collection*/
-        ArrayList indexed = new ArrayList();
-        foreach (var irow in documents)
-        {
-            var mapped = MapJsonIndex(irow._type, irow.document, s.MapIndex).Cast<IndexedRow>();
-            indexed.AddRange(mapped.ToList());
-        }
-        /*merge elements*/
-        //var merged = MergeJsonIndex(indexed, s.MergeIndex).Cast<IndexedRow>();
-
-        /*reduce each document with the collection of filters and format the result set*/
-        ////var reduced = ReduceJsonResult(merged, s.ReduceIndex).Cast<IndexedRow>();
-        //var reduced = ReduceJsonResult(merged, s.ReduceIndex).Cast<IndexedRow>().Distinct();
-
-        /*serialize results*/
-        //return reduced;
-        return indexed.Cast<IndexedRow>().ToList().Distinct();
-    }
-
-    /// <summary>
-    /// extracts references to external documents embedded within a parent document, and retrieves the document to which the reference
-    /// refers, replacing the reference with the contents of the document referenced
-    /// </summary>
-    /// <param name="endpoint">Location of the document store</param>
-    /// <param name="document">The JSON document to be processed</param>
-    /// <param name="documents">The list of documents referenced in the parent an all children to the parent</param>
-    /// <returns></returns>
-    public static ArrayList ProcessInclusions(String endpoint, IncludedRow document, ArrayList documents)
-    {
-        Boolean inclusions = documents.Cast<IncludedRow>().Any(c => String.Equals(c.nodeKey, "include", sc));
-        Boolean exclusions = documents.Cast<IncludedRow>().Any(c => String.Equals(c.document, "exclude", sc));
-        String root = documents.Cast<IncludedRow>().SingleOrDefault(r => String.IsNullOrEmpty(r.nodeKey))._type;
-        if (!string.IsNullOrEmpty(document.document))
-        {
-            /*collect the references within the document*/
-            var matches = SelectIncluded(document.document).Cast<IncludedRow>().Distinct();
-
-            if (matches.Count() > 0)
-            {
-                foreach (IncludedRow row in matches)
-                {
-                    /*verify the document hasn't already been processed and isn't a reference to a load carrier*/
-                    if (!documents.Cast<IncludedRow>().Any(c => String.Equals(c._id, row._id, sc)))
-                    {
-                        /*retrieve any inclusions found within the document*/
-                        var incdoc = ClrRetrieveDocument(endpoint, row._id);
-                        /*assign the IncludedKey to the output*/
-                        incdoc.nodeKey = row.nodeKey;
-                        /*if inclusions have been defined verify the result document qualifies for inclusion in the result set*/
-                        if ((inclusions && !documents.Cast<IncludedRow>().Any(c => String.Equals(c._type, incdoc._type, sc) && String.Equals(c.nodeKey, "include", sc))) |
-                            /*if exclusion have been defined verify the result document isn't to be excluded*/
-                            (exclusions && documents.Cast<IncludedRow>().Any(c => String.Equals(c._type, incdoc._type, sc) && String.Equals(c.document, "exclude", sc))))
-                        {
-                            incdoc.document = "exclude";
-                            documents.Add(incdoc);
-                            continue;
-                        }
-
-                        /*map the Included Key to the object to be retrieved*/
-                        incdoc.nodeKey = row.nodeKey;
-                        /*if no document was returned*/
-                        if (String.IsNullOrEmpty(incdoc.document))
-                            incdoc.document = String.Format("Document Not Found.");
-                        /*verify the document isn't already in the collection before adding it*/
-                        if (!documents.Cast<IncludedRow>().Any(c => c._id.Equals(incdoc._id)))
-                            documents.Add(incdoc);
-                        /*set the included document as the current document for the recursion*/
-                        document = incdoc;
-                        /*process inclusions residing in the included document*/
-                        documents = ProcessInclusions(endpoint, document, documents);
-                    }
-                }
-            }/*all the inclusions have been processed. return the results to the caller.*/
-            else return documents;
-        }
-        /*no more matches exist. return the results to the caller.*/
-        return documents;
+        //nodekey = (String)(col.nodeKey);
     }
 
     /// <summary>
