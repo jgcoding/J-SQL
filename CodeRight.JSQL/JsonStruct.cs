@@ -46,13 +46,10 @@ public partial class UserDefinedFunctions
             this.ElementID = 1;
             this.ParentID = 0;
             this.ObjectID = 1;
-            this.Command = "select";
             this.Url = "root";
             this.Node = "root";
-            this.KeyColumn = "NA";
+            this.ItemKey = String.Empty;
             this.ItemType = "object";
-            this.IsVisible = true;
-            this.IsDirty = false;
         }
     }
 

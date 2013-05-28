@@ -40,23 +40,26 @@ public struct ToJson : IBinarySerialize
     /// <param name="itemValue"></param>
     public void Accumulate(SqlString itemKey, SqlString itemValue)
     {
-        if (itemValue.IsNull | itemValue.Value.Length.Equals(0))
+        if (String.IsNullOrEmpty(itemKey.Value))
+        {
             return;
-
+        }
         
         /*handle simple arrays (non-key/value pairs)*/
-        if (itemKey.IsNull && !itemValue.IsNull)
+        if (String.IsNullOrEmpty(itemKey.Value) && !String.IsNullOrEmpty(itemValue.Value))
         {
             this.objType = "array";
             this.json.AppendFormat("{0},", itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
         }
-        else if (String.Equals(itemKey.Value, String.Empty) && !itemValue.IsNull)
+        else if (String.Equals(itemKey.Value, "@object", sc) && !String.IsNullOrEmpty(itemValue.Value))
         {
-            this.objType = "objects";
+            this.objType = "object";
             this.json.AppendFormat("{0},", itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
         }
         else/*handle key/value pairs*/
+        {
             this.json.AppendFormat("\"{0}\":{1},", itemKey.Value, itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
+        }
     }
 
     public String FormatJsonValue(String itemValue)

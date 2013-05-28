@@ -48,6 +48,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ToJson_bak.cs" />
     <Compile Include="CryptoManager.cs" />
     <Compile Include="DataAccess.cs" />
     <Compile Include="Extension.cs" />

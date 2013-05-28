@@ -518,7 +518,15 @@ public partial class UserDefinedFunctions
         foreach (JsonRow r in rows)
         {            
             /*update the url*/
-            r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
+            //r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
+            if (r.ItemType == "object" || r.ItemType == "array")
+            {
+                r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
+            }
+            else
+            {
+                r.Url = String.Format("{0}", eroot.Url);
+            }
 
             // double back and handle the array and/or the object rows
             switch (r.ItemType.CompareString())
@@ -599,7 +607,7 @@ public partial class UserDefinedFunctions
                                 sa.ObjectID = 0;
                                 sa.Url = String.Format("{0}[{1}]", r.Url, ai);
                                 sa.Node = r.ItemKey;
-                                sa.ItemKey = null;// String.Format("[{0}]", ai);
+                                sa.ItemKey = String.Empty;
                                 sa.ItemValue = item;
                                 sa.ItemType = itype;
                                 /*add the nested parent array object*/
