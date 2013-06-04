@@ -13,10 +13,10 @@ using System.Text.RegularExpressions;
     IsInvariantToNulls = true, //optimizer property
     IsInvariantToDuplicates = false, //optimizer property
     IsInvariantToOrder = false, //optimizer property
-    Name = "ToJson",
+    Name = "JSqlSerializer",
     MaxByteSize = -1) //maximum size in bytes of persisted value
 ]
-public struct ToJson : IBinarySerialize
+public struct JSqlSerializer : IBinarySerialize
 {
     public static readonly StringComparison sc = StringComparison.InvariantCultureIgnoreCase;
     /// <summary>
@@ -113,7 +113,7 @@ public struct ToJson : IBinarySerialize
     /// Merge the partially computed aggregate with this aggregate.
     /// </summary>
     /// <param name="other"></param>
-    public void Merge(ToJson Group)
+    public void Merge(JSqlSerializer Group)
     {
         this.json.Append(Group.json);
         this.objType = Group.objType;

@@ -7,15 +7,15 @@ GO
 --DROP FUNCTION [dbo].[GetNode]
 --GO
 
-/****** Object:  UserDefinedAggregate [dbo].[ToJson]    Script Date: 01/09/2012 00:37:45 ******/
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJson]') AND type = N'AF')
-DROP AGGREGATE [dbo].[ToJson]
+--/****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 01/09/2012 00:37:45 ******/
+--IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[JSqlSerializer]') AND type = N'AF')
+--DROP AGGREGATE [dbo].[JSqlSerializer]
 GO
-/****** Object:  UserDefinedAggregate [dbo].[ToJson]    Script Date: 01/09/2012 00:37:45 ******/
-CREATE AGGREGATE [dbo].[ToJson]
+/****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 01/09/2012 00:37:45 ******/
+CREATE AGGREGATE [dbo].[JSqlSerializer]
 (@itemKey [nvarchar](100), @itemValue [nvarchar](max))
 RETURNS[nvarchar](max)
-EXTERNAL NAME [CodeRight.JSQL].[ToJson]
+EXTERNAL NAME [CodeRight.JSQL].[JSqlSerializer]
 GO
 
 /****** Object:  UserDefinedFunction [dbo].[ToJsonTable]    Script Date: 11/13/2011 16:05:07 ******/

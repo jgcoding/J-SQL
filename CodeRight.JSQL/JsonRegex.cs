@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 public partial class UserDefinedFunctions
 {
     public static readonly Regex rxJsonAll = new Regex(
-            "\"(?<ItemKey>(?:\\^{0,1})[\\*a-zA-Z0-9/\\-\\s\\#{}:/]*/{0,1})\":(?<ItemValue" +
+            "\"(?<ItemKey>(?:\\^{0,1})[\\.\\*a-zA-Z0-9/\\-\\s\\#{}:/]*/{0,1})\":(?<ItemValue" +
             ">(?>\"([^\\\\\"]|\\\\\\\\|\\\\\")*\")|\\[(?>\\{(?>[^{}]+" +
             "|\\{(?<Element>)|\\}(?<-Element>))*(?(Element)(?!))(?:\\}[,]" +
             "*))*(?>\"(?>[^\\\"]+|\"(?<Element>)|\"(?<-Element>))*(?(El" +
