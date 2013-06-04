@@ -382,14 +382,14 @@ public partial class UserDefinedFunctions
     /// <param name="json">The JSON to be parsed into a tabular format</param>
     /// <returns>IEnumerable of JSON rows</returns>
     [SqlFunction(FillRowMethodName = "ParsedRows",
-    TableDefinition = "ParentID int, ObjectID int, Url nvarchar(500), Node nvarchar(100), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25)")]
+    TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25)")]
     public static IEnumerable rxJsonParse(String json)
-    {
+    {        
         /*initialize the collection with the root containing the entire json object*/
-        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, Node = "root", ItemValue = json };
+        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, ItemValue = json };
 
         var rows = ParseJson(root, 1);
-        root = new JsonRow { ParentID = 0, ObjectID = 1, Node = "root", ItemValue = String.Empty, ItemType = "object"};
+        root = new JsonRow { ParentID = 0, ObjectID = 1, ItemValue = String.Empty, ItemType = "object"};
         rows.Add(root);
         return rows;
     }
@@ -400,23 +400,32 @@ public partial class UserDefinedFunctions
     /// <param name="row">The JsonRow containing the parsed values of a JSON element or node</param>
     /// <param name="ParentID">The temporary id number of the parsed elements parent</param>
     /// <param name="ObjectID">The temporary id of the node</param>
-    /// <param name="Url">The tree node bread-crumb reference to the parsed element</param>
     /// <param name="Node">The name of the object in which an element resides. Includes the object itself</param>
     /// <param name="ItemKey">The item key in a key-value pairing</param>
     /// <param name="ItemValue">The item value in a key-value pairing</param>
     /// <param name="ItemType">The item type in a key-value pairing</param>
     /// Serves the same purpose as a WHERE clause template. </param>
     private static void ParsedRows(Object row, out Int32 ParentID, out Int32 ObjectID,
-    out String Url, out String Node, out String ItemKey, out String ItemValue, out String ItemType)
+    out String Node, out String ItemKey, out String ItemValue, out String ItemType)
     {
         JsonRow col = (JsonRow)row;
         ParentID = (Int32)(col.ParentID);
         ObjectID = (Int32)(col.ObjectID);
-        Url = (String)(col.Url);
         Node = (String)(col.Node);
-        ItemKey = (String)(col.ItemKey);
+        ItemKey = (String)(col.ItemKey);        
         ItemValue = (String)(col.ItemValue);
         ItemType = (String)(col.ItemType);
+        switch (ItemType)
+        {
+            case"array":
+                ItemValue = String.Concat("{", "@JArray", ObjectID, "}");
+                break;
+            case "object":
+                ItemValue = String.Concat("{", "@JObject", ObjectID, "}");
+                break;
+            default:
+                break;
+        }
     }
 
     /// <summary>
@@ -454,7 +463,6 @@ public partial class UserDefinedFunctions
             {
                 ParentID = eroot.ParentID,
                 ObjectID = 0,
-                Node = eroot.Node,
                 ItemKey = m.Groups["ItemKey"].Value,
                 ItemValue = m.Groups["ItemValue"].Value
             };
@@ -518,14 +526,13 @@ public partial class UserDefinedFunctions
         foreach (JsonRow r in rows)
         {            
             /*update the url*/
-            //r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
             if (r.ItemType == "object" || r.ItemType == "array")
             {
-                r.Url = String.Format("{0}.{1}", eroot.Url, r.ItemKey);
+                r.Node = String.Format("{0}.{1}", eroot.Node, r.ItemKey);
             }
             else
             {
-                r.Url = String.Format("{0}", eroot.Url);
+                r.Node = String.Format("{0}", eroot.Node);
             }
 
             // double back and handle the array and/or the object rows
@@ -543,9 +550,9 @@ public partial class UserDefinedFunctions
                             JsonRow aroot = new JsonRow();
                             aroot.ParentID = r.ObjectID;
                             aroot.ObjectID = newID;
-                            aroot.Url = String.Format("{0}[{1}]", r.Url, oIndex);
-                            aroot.Node = r.ItemKey;
-                            aroot.ItemKey = r.ItemKey;
+                            aroot.Node = String.Format("{0}[{1}]", r.Node, oIndex);
+                            //aroot.ItemKey = r.ItemKey;
+                            aroot.ItemKey = String.Empty;
                             aroot.ItemValue = o.Value;
                             aroot.ItemType = "object";
 
@@ -560,9 +567,9 @@ public partial class UserDefinedFunctions
                             JsonRow aoroot = new JsonRow();
                             aoroot.ParentID = aorow.ObjectID;
                             aoroot.ObjectID = newID;
-                            aoroot.Url = aorow.Url;
-                            aoroot.Node = aorow.ItemKey;
-                            aoroot.ItemKey = aorow.ItemKey;
+                            aoroot.Node = aorow.Node;
+                            //aoroot.ItemKey = aorow.ItemKey;
+                            aoroot.ItemKey = String.Empty;
                             aoroot.ItemValue = String.IsNullOrEmpty(aorow.ItemValue) ? "object" : aorow.ItemValue;
 
                             /*add the nested elements within the nested parent array object*/
@@ -605,8 +612,7 @@ public partial class UserDefinedFunctions
                                 JsonRow sa = new JsonRow();
                                 sa.ParentID = r.ObjectID;
                                 sa.ObjectID = 0;
-                                sa.Url = String.Format("{0}[{1}]", r.Url, ai);
-                                sa.Node = r.ItemKey;
+                                sa.Node = String.Format("{0}[{1}]", r.Node, ai);
                                 sa.ItemKey = String.Empty;
                                 sa.ItemValue = item;
                                 sa.ItemType = itype;
@@ -624,8 +630,7 @@ public partial class UserDefinedFunctions
                     JsonRow oroot = new JsonRow();
                     oroot.ParentID = r.ObjectID;
                     oroot.ObjectID = newID;
-                    oroot.Url = r.Url;
-                    oroot.Node = r.ItemKey;
+                    oroot.Node = r.Node;
                     oroot.ItemKey = r.ItemKey;
                     oroot.ItemValue = r.ItemValue;
 

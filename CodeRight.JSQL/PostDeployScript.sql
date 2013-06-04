@@ -1,6 +1,58 @@
 ﻿USE [Utilities]
 GO
 
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GetNode]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[GetNode]
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ /*=============================================
+ Author:		JG Coding
+ Create date: 6/3/2013
+ Description:	Returns the most deeply nested node in which no objects or arrays reside
+ =============================================*/
+CREATE FUNCTION [dbo].[GetNode] 
+(
+	@jsonTable jsonTable readonly,
+	@depth int
+)
+RETURNS
+@node TABLE 
+(
+	nodeId int,
+	json nvarchar(max)
+)
+AS
+BEGIN
+	-- Declare the return variable here
+	DECLARE @json nvarchar(max), @nodeid int;
+
+	--process objects
+	select @nodeid = max(objectid)
+		from @jsonTable
+			where (itemType in ('object','array')
+				and (itemValue like '{@J%'))
+				and ((objectid <= @depth) or (@depth = 0))
+	
+	select @json = dbo.ToJson(itemKey, itemValue)
+		from @jsonTable			
+			where parentId = @nodeid
+			group by parentId
+			
+	insert @node(nodeId, json)
+		values (@nodeid, @json)
+	RETURN 
+END
+
+GO
+
 /****** Object:  UserDefinedAggregate [dbo].[ToJson]    Script Date: 01/09/2012 00:37:45 ******/
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJson]') AND type = N'AF')
 DROP AGGREGATE [dbo].[ToJson]
@@ -37,8 +89,7 @@ CREATE FUNCTION [dbo].[rxJsonParse](@json [nvarchar](max))
 RETURNS  TABLE (
 	[ParentID] [int] NULL,
 	[ObjectID] [int] NULL,
-	[Url] [nvarchar](500) NULL,
-	[Node] [nvarchar](100) NULL,
+	[Node] [nvarchar](500) NULL,
 	[ItemKey] [nvarchar](500) NULL,
 	[ItemValue] [nvarchar](max) NULL,
 	[ItemType] [nvarchar](25) NULL

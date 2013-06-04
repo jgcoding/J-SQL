@@ -67,7 +67,7 @@ public partial class UserDefinedFunctions
                     //json = string.Format("\"{0}\":\"{1}\"", key, rdate.ToString("MM/dd/yyyy HH:mm:ss.FFF", ci.DateTimeFormat));
 
                     // format to JavaScript DateTime formatting
-                    json = String.Format("\"{0}\":new Date({1})", key, ToUnixTime(rdate));
+                    json = String.Format("\"{0}\":\"/new Date({1})/\"", key, ToUnixTime(rdate));
                 }
                 break;
             case "uniqueidentifier":

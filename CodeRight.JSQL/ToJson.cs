@@ -42,19 +42,29 @@ public struct ToJson : IBinarySerialize
     {
         if (String.IsNullOrEmpty(itemKey.Value))
         {
-            return;
-        }
-        
-        /*handle simple arrays (non-key/value pairs)*/
-        if (String.IsNullOrEmpty(itemKey.Value) && !String.IsNullOrEmpty(itemValue.Value))
-        {
-            this.objType = "array";
-            this.json.AppendFormat("{0},", itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
-        }
-        else if (String.Equals(itemKey.Value, "@object", sc) && !String.IsNullOrEmpty(itemValue.Value))
-        {
-            this.objType = "object";
-            this.json.AppendFormat("{0},", itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
+            // don't process empty key-value pairs
+            if (String.IsNullOrEmpty(itemValue.Value))
+            {
+                return;    
+            }
+            // this is a JObject token
+            if (itemValue.Value.StartsWith("{@JObject", sc))
+            {
+                this.objType = "object";
+                this.json.AppendFormat("{0},", FormatJsonValue(itemValue.Value));
+            }
+            // this is a JArray token
+            else if (itemValue.Value.StartsWith("{@JArray", sc))
+            {
+                this.objType = "array";
+                this.json.AppendFormat("{0},", FormatJsonValue(itemValue.Value));
+            }
+            // otherwise, handle simple arrays (non-key/value pairs)
+            else
+            {   
+                this.objType = "array";
+                this.json.AppendFormat("{0},", itemValue.Value.StartsWith("\"") ? itemValue.Value : FormatJsonValue(itemValue.Value));
+            }
         }
         else/*handle key/value pairs*/
         {
@@ -66,21 +76,33 @@ public struct ToJson : IBinarySerialize
     {
         /*arrays and objects*/
         if (itemValue.StartsWith("[") | itemValue.StartsWith("{"))
+        {
             return itemValue;
+        }
         /*boolean*/
         else if (String.Equals(itemValue, "true", sc) | String.Equals(itemValue, "false", sc))
+        {
             return itemValue;
+        }
         /*floats*/
         else if (Regex.IsMatch(itemValue, "^-{0,1}\\d*\\.[\\d]+$"))
+        {
             return itemValue;
+        }
         /*ints*/
         else if (Regex.IsMatch(itemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$"))
+        {
             return itemValue;
+        }
         /*empty quotes*/
         else if (String.Equals(itemValue, "\"\""))
+        {
             return itemValue;
+        }
         else
+        {
             return String.Format("\"{0}\"", itemValue);
+        }
     }
     /// <summary>
     /// Merge the partially computed aggregate with this aggregate.
