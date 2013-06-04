@@ -16,8 +16,8 @@ public partial class UserDefinedFunctions
     /// </summary>
     /// <param name="input">the document id of the document referenced</param>
     /// <returns>IEnumerable</returns>
-    [SqlFunction(FillRowMethodName = "IncludedRows",
-    TableDefinition = "IncludedKey nvarchar(100), DocumentID uniqueidentifier")]
+    //[SqlFunction(FillRowMethodName = "IncludedRows",
+    //TableDefinition = "IncludedKey nvarchar(100), DocumentID uniqueidentifier")]
     public static IEnumerable SelectIncluded(String input)
     {
         ArrayList rows = new ArrayList();
@@ -128,7 +128,7 @@ public partial class UserDefinedFunctions
     private static String BuildSearchCriteria(String json)
     {
         /*parse the search criteria*/
-        var criteria = rxJsonParse(json).Cast<JsonRow>().Where(w => !String.IsNullOrEmpty(w.ItemValue)).ToList();
+        var criteria = ToJsonTable(json).Cast<JsonRow>().Where(w => !String.IsNullOrEmpty(w.ItemValue)).ToList();
 
         /*select the view name*/
         String viewName = criteria.First(v => String.Equals(v.ItemKey, "EntityType")).ItemValue;
@@ -223,8 +223,8 @@ public partial class UserDefinedFunctions
         view = (String)column[1];
     }
 
-    [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "MatchedViews",
-        TableDefinition = "[_id] nvarchar(36), [view] nvarchar(max)")]
+    //[SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "MatchedViews",
+    //    TableDefinition = "[_id] nvarchar(36), [view] nvarchar(max)")]
     public static IEnumerable CriteriaSearch(String json)
     {
         ArrayList rows = new ArrayList();
@@ -260,10 +260,9 @@ public partial class UserDefinedFunctions
         Value_U = String.IsNullOrEmpty((String)column[2]) ? "null" : (String)column[2];
     }
 
-    [SqlFunction()]
+    //[SqlFunction()]
     public static Boolean rxPivot(String json, String key, String value)
     {
-
         return Regex.IsMatch(json, value);
     }
 
@@ -284,7 +283,7 @@ public partial class UserDefinedFunctions
     /// </summary>
     /// <param name="json"></param>
     /// <returns></returns>
-    [SqlFunction()]
+    //[SqlFunction()]
     public static String SelectKey(String json)
     {
         return rxKey.Match(json).Groups["nodeKey"].Value;
@@ -297,8 +296,8 @@ public partial class UserDefinedFunctions
     /// <param name="sourceKey">The item key of the element in the source document</param>
     /// <param name="targetUrl">The url of the target element</param>
     /// <returns></returns>
-    [SqlFunction(FillRowMethodName = "MergedUrls",
-        TableDefinition = "Url nvarchar(500), Selector nvarchar(500)")]
+    //[SqlFunction(FillRowMethodName = "MergedUrls",
+    //    TableDefinition = "Url nvarchar(500), Selector nvarchar(500)")]
     public static IEnumerable MergeUrl(String sourceUrl, String sourceKey, String targetUrl)
     {
         ArrayList rows = new ArrayList();
@@ -327,8 +326,8 @@ public partial class UserDefinedFunctions
     /// </summary>
     /// <param name="url">The url to be parsed or split into tabular format</param>
     /// <returns>IEnumerable</returns>
-    [SqlFunction(FillRowMethodName = "ParsedUrlRows",
-    TableDefinition = "Generation int, NodeKey nvarchar(36), Node nvarchar(100)")]
+    //[SqlFunction(FillRowMethodName = "ParsedUrlRows",
+    //TableDefinition = "Generation int, NodeKey nvarchar(36), Node nvarchar(100)")]
     public static IEnumerable ParseUrl(String url)
     {
         ArrayList rows = new ArrayList();
@@ -383,7 +382,7 @@ public partial class UserDefinedFunctions
     /// <returns>IEnumerable of JSON rows</returns>
     [SqlFunction(FillRowMethodName = "ParsedRows",
     TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25)")]
-    public static IEnumerable rxJsonParse(String json)
+    public static IEnumerable ToJsonTable(String json)
     {        
         /*initialize the collection with the root containing the entire json object*/
         JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, ItemValue = json };
@@ -395,7 +394,7 @@ public partial class UserDefinedFunctions
     }
 
     /// <summary>
-    /// The strongly typed row result object from a rxJsonParse call
+    /// The strongly typed row result object from a ToJsonTable call
     /// </summary>
     /// <param name="row">The JsonRow containing the parsed values of a JSON element or node</param>
     /// <param name="ParentID">The temporary id number of the parsed elements parent</param>
@@ -425,6 +424,11 @@ public partial class UserDefinedFunctions
                 break;
             default:
                 break;
+        }
+        if (String.Equals(ItemValue,"{@JObject0}",sc))
+        {
+            ItemValue = "null";
+            ItemType = "null";
         }
     }
 
@@ -513,7 +517,7 @@ public partial class UserDefinedFunctions
                 row.ItemType = "int";
             }
             /*nulls*/
-            else if (row.ItemValue == null)
+            else if ((String.Equals(row.ItemValue, "null", sc)) | (row.ItemValue == null))
             {
                 row.ItemType = "null";
             }
@@ -674,7 +678,7 @@ public partial class UserDefinedFunctions
     /// "ItemKey" is the key in the key/value pair of any Json element.
     /// </summary>
     /// <param name="url">JsonUrl for a parsed Json element</param>
-    [SqlFunction()]
+    //[SqlFunction()]
     public static String TemplateJsonUrl(String url)
     {
         StringBuilder template = new StringBuilder();

@@ -99,6 +99,11 @@ public struct ToJson : IBinarySerialize
         {
             return itemValue;
         }
+        /*nulls*/
+        else if ((String.Equals(itemValue, "null", sc)) || (itemValue == null))
+        {
+            return itemValue;
+        }
         else
         {
             return String.Format("\"{0}\"", itemValue);
