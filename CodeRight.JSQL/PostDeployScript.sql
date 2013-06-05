@@ -11,6 +11,17 @@ IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GetNo
 DROP FUNCTION [dbo].[GetNode]
 GO
 
+/****** Object:  UserDefinedFunction [dbo].[ToJsonTable]    Script Date: 11/13/2011 16:05:07 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJsonTable]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[ToJsonTable]
+GO
+
+/****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 06/05/2013 09:15:02 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[JSqlSerializer]') AND type = N'AF')
+DROP AGGREGATE [dbo].[JSqlSerializer]
+
+GO
+
 /****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 01/09/2012 00:37:45 ******/
 CREATE AGGREGATE [dbo].[JSqlSerializer]
 (@itemKey [nvarchar](100), @itemValue [nvarchar](max))
@@ -18,10 +29,6 @@ RETURNS[nvarchar](max)
 EXTERNAL NAME [CodeRight.JSQL].[JSqlSerializer]
 GO
 
-/****** Object:  UserDefinedFunction [dbo].[ToJsonTable]    Script Date: 11/13/2011 16:05:07 ******/
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJsonTable]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
-DROP FUNCTION [dbo].[ToJsonTable]
-GO
 
 /****** Object:  UserDefinedFunction [dbo].[ToJsonTable]    Script Date: 11/13/2011 16:05:07 ******/
 CREATE FUNCTION [dbo].[ToJsonTable](@json [nvarchar](max))
@@ -147,8 +154,8 @@ GO
 --EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[rxContains]
 --GO
 
-ALTER TABLE [dbo].[ReportStore] ADD  CONSTRAINT [DF_ReportStore_eventTime]  DEFAULT ([dbo].[ToUnixTime](getdate())) FOR [eventTime]
-GO
+--ALTER TABLE [dbo].[ReportStore] ADD  CONSTRAINT [DF_ReportStore_eventTime]  DEFAULT ([dbo].[ToUnixTime](getdate())) FOR [eventTime]
+--GO
 
 /*!!!!!!!!!DEPRECATED FUNCTIONS!!!!!!!!*/
 
