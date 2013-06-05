@@ -1,16 +1,16 @@
 ﻿USE [Utilities]
 GO
 
-
---/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
---IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GetNode]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
---DROP FUNCTION [dbo].[GetNode]
---GO
-
---/****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 01/09/2012 00:37:45 ******/
---IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[JSqlSerializer]') AND type = N'AF')
---DROP AGGREGATE [dbo].[JSqlSerializer]
+/****** Object:  UserDefinedFunction [dbo].[ToJson]    Script Date: 06/05/2013 08:41:36 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJson]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[ToJson]
 GO
+
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/05/2013 08:41:22 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GetNode]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[GetNode]
+GO
+
 /****** Object:  UserDefinedAggregate [dbo].[JSqlSerializer]    Script Date: 01/09/2012 00:37:45 ******/
 CREATE AGGREGATE [dbo].[JSqlSerializer]
 (@itemKey [nvarchar](100), @itemValue [nvarchar](max))
@@ -37,52 +37,101 @@ AS
 EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ToJsonTable]
 GO
 
---/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
---SET ANSI_NULLS ON
---GO
 
---SET QUOTED_IDENTIFIER ON
---GO
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
+SET ANSI_NULLS ON
+GO
 
--- /*=============================================
--- Author:		JG Coding
--- Create date: 6/3/2013
--- Description:	Returns the most deeply nested node in which no objects or arrays reside
--- =============================================*/
---CREATE FUNCTION [dbo].[GetNode] 
---(
---	@jsonTable jsonTable readonly,
---	@depth int
---)
---RETURNS
---@node TABLE 
---(
---	nodeId int,
---	json nvarchar(max)
---)
---AS
---BEGIN
---	-- Declare the return variable here
---	DECLARE @json nvarchar(max), @nodeid int;
+SET QUOTED_IDENTIFIER ON
+GO
 
---	--process objects
---	select @nodeid = max(objectid)
---		from @jsonTable
---			where (itemType in ('object','array')
---				and (itemValue like '{@J%'))
---				and ((objectid <= @depth) or (@depth = 0))
+ /*=============================================
+ Author:		JG Coding
+ Create date: 6/3/2013
+ Description:	Returns the most deeply nested node in which no objects or arrays reside
+ =============================================*/
+CREATE FUNCTION [dbo].[GetNode] 
+(
+	@jsonTable jsonTable readonly,
+	@depth int
+)
+RETURNS
+@node TABLE 
+(
+	nodeId int,
+	json nvarchar(max)
+)
+AS
+BEGIN
+	-- Declare the return variable here
+	DECLARE @json nvarchar(max), @nodeid int;
+
+	--process objects
+	select @nodeid = max(objectid)
+		from @jsonTable
+			where (itemType in ('object','array')
+				and (itemValue like '{@J%'))
+				and ((objectid <= @depth) or (@depth = 0))
 	
---	select @json = dbo.ToJson(itemKey, itemValue)
---		from @jsonTable			
---			where parentId = @nodeid
---			group by parentId
+	select @json = dbo.JsqlSerializer(itemKey, itemValue)
+		from @jsonTable			
+			where parentId = @nodeid
+			group by parentId
 			
---	insert @node(nodeId, json)
---		values (@nodeid, @json)
---	RETURN 
---END
+	insert @node(nodeId, json)
+		values (@nodeid, @json)
+	RETURN 
+END
+GO
 
---GO
+/****** Object:  UserDefinedFunction [dbo].[ToJson]    Script Date: 06/04/2013 07:05:49 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ /*=============================================
+ Author:		JG Coding
+ Create date: 6/3/2013
+ Description:	Returns the most deeply nested node in which no objects or arrays reside
+ =============================================*/
+CREATE FUNCTION [dbo].[ToJson] 
+(
+	@jsonTable jsonTable readonly,
+	@depth int
+)
+RETURNS nvarchar(max)
+AS
+BEGIN
+	-- Declare the return variable here
+	DECLARE @json nvarchar(max), @nodeid int, @jsonOut jsonTable;
+	insert @jsonOut
+		select [parentId], [objectId], [node], [itemKey], [itemValue], [itemType] 
+			from @jsonTable
+	while 1=1
+		begin
+			select @nodeid = nodeid from dbo.GetNode(@jsonOut,0);	
+			if @nodeid is null
+			break;
+			update p
+			set itemValue = n.json
+				from @jsonOut p
+					cross apply (
+						select nodeId, json 
+							from dbo.GetNode(@jsonOut,0)
+						)n
+					where p.objectId = n.nodeId	
+		end		
+	select @json = itemValue from @jsonOut
+		where parentId = 0
+		
+	-- Return the result of the function
+	RETURN @json
+
+END
+
+GO
 
 
 --/****** Object:  UserDefinedFunction [dbo].[rxContains]    Script Date: 02/06/2012 08:12:45 ******/
