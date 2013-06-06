@@ -422,13 +422,11 @@ public partial class UserDefinedFunctions
             case "object":
                 ItemValue = String.Concat("{", "@JObject", ObjectID, "}");
                 break;
+            case "null":
+                ItemValue = "null";
+                break;
             default:
                 break;
-        }
-        if (String.Equals(ItemValue,"{@JObject0}",sc))
-        {
-            ItemValue = "null";
-            ItemType = "null";
         }
     }
 
@@ -517,8 +515,9 @@ public partial class UserDefinedFunctions
                 row.ItemType = "int";
             }
             /*nulls*/
-            else if ((String.Equals(row.ItemValue, "null", sc)) | (row.ItemValue == null))
+            else if (String.IsNullOrEmpty(row.ItemValue))
             {
+                row.ItemValue = null;
                 row.ItemType = "null";
             }
             
