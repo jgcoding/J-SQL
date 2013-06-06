@@ -140,6 +140,15 @@ END
 
 GO
 
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ReportStore]') AND type in (N'U'))
+	BEGIN
+	IF  NOT EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'[DF_ReportStore_eventTime]') AND type = 'D')
+		BEGIN
+			ALTER TABLE [dbo].[ReportStore] ADD  CONSTRAINT [DF_ReportStore_eventTime]  DEFAULT ([dbo].[ToUnixTime](getdate())) FOR [eventTime]
+		END
+	END
+GO
+
 
 --/****** Object:  UserDefinedFunction [dbo].[rxContains]    Script Date: 02/06/2012 08:12:45 ******/
 --IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[rxContains]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
@@ -154,8 +163,6 @@ GO
 --EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[rxContains]
 --GO
 
---ALTER TABLE [dbo].[ReportStore] ADD  CONSTRAINT [DF_ReportStore_eventTime]  DEFAULT ([dbo].[ToUnixTime](getdate())) FOR [eventTime]
---GO
 
 /*!!!!!!!!!DEPRECATED FUNCTIONS!!!!!!!!*/
 
