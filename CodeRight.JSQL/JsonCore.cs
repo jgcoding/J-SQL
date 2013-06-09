@@ -10,262 +10,7 @@ using System.Data;
 using System.Text.RegularExpressions;
 
 public partial class UserDefinedFunctions
-{
-    /// <summary>
-    /// Returns a collection of documents referenced within a selection of JSON documents
-    /// </summary>
-    /// <param name="input">the document id of the document referenced</param>
-    /// <returns>IEnumerable</returns>
-    //[SqlFunction(FillRowMethodName = "IncludedRows",
-    //TableDefinition = "IncludedKey nvarchar(100), DocumentID uniqueidentifier")]
-    public static IEnumerable SelectIncluded(String input)
-    {
-        ArrayList rows = new ArrayList();
-        ParseInclusions(input, rows);
-        return rows;
-    }
-
-    /// <summary>
-    /// A strongly typed row object containing a document referenced within a parent document
-    /// </summary>
-    /// <param name="row">The row object returned within the result set of the CLR function</param>
-    /// <param name="nodeKey">The id of the node selected</param>
-    /// <param name="_id">The document id of the document referenced</param>
-    private static void IncludedRows(Object row, out String nodeKey, out Guid _id)
-    {
-        IncludedRow col = (IncludedRow)row;
-        nodeKey = col.nodeKey.ToString();
-        _id = new Guid(col._id);
-
-    }
-
-    /// <summary>
-    /// helper method for parsing and extracting the document id of documents referenced in a parent document
-    /// </summary>
-    /// <param name="input">The document id of the reference embedded within a parent document</param>
-    /// <param name="rows">The accumulated rows of documents retrieved using the references embedded in a parent document</param>
-    private static void ParseInclusions(String input, ArrayList rows)
-    {
-        foreach (Match m in rxIncludedKey.Matches(input))
-        {
-            IncludedRow column = new IncludedRow
-            {
-                nodeKey = m.Groups["IncludedKey"].Value,
-                _id = m.Groups["DocumentID"].Value
-            };
-            rows.Add(column);
-        }
-    }
-
-    /// <summary>
-    /// Compares a url template provided with the template of each element in the selection to determine if they match. 
-    /// Serves as means for selecting elements matching certain criteria as in a WHERE clause
-    /// </summary>
-    /// <param name="url">The node address of an element within a document</param>
-    /// <returns>IEnumerable - Returns a list of elements matching the url template. </returns>
-    public static IEnumerable CompareJsonUrl(String url)
-    {
-        ArrayList rows = new ArrayList();
-        StringBuilder template = new StringBuilder();
-
-        string[] groups = rxUrl.GetGroupNames();
-        foreach (Match m in rxUrl.Matches(url))
-        {
-            /*step through each object extracted from the url and reassemble it, replacing the UUID's with placeholders*/
-            foreach (string s in groups)
-            {
-                Group g = m.Groups[s];
-                CaptureCollection cc = g.Captures;
-                foreach (Capture cap in cc)
-                {
-                    /*If this is a captured Node from the Url.*/
-                    if (String.Equals(s, "node", sc))
-                        template.AppendFormat("/{0}:{1}", cap.Value, "{0}");
-                    /*If this is a captured ItemKey from the Url.*/
-                    if (String.Equals(s, "itemkey", sc))
-                        template.AppendFormat("/{0}", cap.Value);
-                }
-            }
-        }
-        return rows;
-    }
-
-    /// <summary>
-    /// Helper method used to dynamically construct either an OUTER APPLY or CROSS APPLY block. 
-    /// </summary>
-    /// <param name="query">Contains the partially constructed T-SQL query string to which an APPLY block may be added.</param>
-    /// <param name="p">Contains the select criteria</param>
-    /// <param name="pcount">Serves as an iterative terminator</param>
-    /// <returns>String containing the T_SQL query and APPLY block</returns>
-    private static StringBuilder ApplyBlock(StringBuilder query, SelectionCriteria p, Int32 pcount)
-    {
-        if (pcount.Equals(1))
-        {
-            p.BlockType = "CROSS";
-            query.AppendFormat("\t{0} APPLY(", String.IsNullOrEmpty(p.BlockType) ? "CROSS" : p.BlockType);
-            query.AppendLine();
-            query.AppendFormat("\t\tselect [_id] from [{0}].[dbo].[{1}]", p.Endpoint, String.IsNullOrEmpty(p.Index) ? "JsonIndex" : p.Index);
-            query.AppendFormat("\t\t\twhere [ViewName] = '{0}'", p.ViewName);
-            query.AppendLine();
-            query.AppendFormat("\t\t\t\tand [Label] = '{0}'", p.PropertyName);
-            query.AppendLine();
-            query.AppendFormat("\t\t\t\tand [ItemValue] {0} {1}", p.Operator, p.PropertyValue);
-            query.AppendLine();
-            query.AppendFormat("\t\t\t\tand [_id] = [ix{0}].[_id]", pcount.Equals(1) ? String.Empty : (pcount - 1).ToString());
-            query.AppendLine();
-            query.AppendFormat("\t)[ix{0}]", pcount);
-            query.AppendLine();
-        }
-        return query;
-    }
-
-    /// <summary>
-    /// Converts a JSON string containing selection criteria for a query and builds out the T-SQL statement 
-    /// necessary to achieve the results sought.
-    /// </summary>
-    /// <param name="json">The selection criteria for the query statement</param>
-    /// <returns>String</returns>
-    private static String BuildSearchCriteria(String json)
-    {
-        /*parse the search criteria*/
-        var criteria = ToJsonTable(json).Cast<JsonRow>().Where(w => !String.IsNullOrEmpty(w.ItemValue)).ToList();
-
-        /*select the view name*/
-        String viewName = criteria.First(v => String.Equals(v.ItemKey, "EntityType")).ItemValue;
-        /*select the block type, if provided*/
-        JsonRow btypeRow = criteria.FirstOrDefault(v => String.Equals(v.ItemKey, "BlockType"));
-        /*apply the default if empty*/
-        String btype = btypeRow == null ? "and" : btypeRow.ItemValue;
-        /*convert the operator to the block type*/
-        String blockType = String.IsNullOrEmpty(btype) ? "cross" : (String.Equals(btype, "or", sc) ? "outer" : "cross");
-
-        String endpoint = criteria.First(v => String.Equals(v.ItemKey, "Endpoint")).ItemValue;
-        if (String.IsNullOrEmpty(endpoint))
-        {
-            return "ERROR!: A valid database name must be provided in the criteria.";
-        }
-        StringBuilder query = new StringBuilder();
-        /*initialize the select statement*/
-        query.AppendFormat("select [ix].[DocumentID], [ix].[IndexDocument] from [{0}].[dbo].[DocumentIndex] [ix]", endpoint);
-        query.AppendLine();
-
-        /*select the properties to which the criteria is to be applied*/
-        var prop = criteria.Where(w => !String.Equals(w.Node, "root", sc)).Select(s => s.Node).Distinct().ToList();
-
-        /*initialize the criteria block counter*/
-        Int32 pcount = 0;
-
-        /*loop through each property, building apply blocks for each operator to be applied*/
-        foreach (var c in prop)
-        {
-            SelectionCriteria wh = new SelectionCriteria();
-            wh.ViewName = viewName;
-            wh.PropertyName = c;
-            wh.BlockType = blockType;
-
-            /*build in clause, if applicable*/
-            var inc = criteria.Where(w => String.Equals(w.Node, c, sc) && String.IsNullOrEmpty(w.ItemKey)).Select(s => s.ItemValue).ToList();
-            if (inc.Count > 0)
-            {
-                wh.Operator = "in";
-                //wh.BlockType = "cross";
-                wh.BlockType = blockType;
-                foreach (var v in inc)
-                {
-                    wh.PropertyValue = String.Concat(wh.PropertyValue, String.Format("'{0}',", v));
-                }
-                wh.PropertyValue = wh.PropertyValue.Remove(wh.PropertyValue.Length - 1, 1);//remove the trailing comma
-                wh.PropertyValue = wh.PropertyValue.Insert(0, "(");
-                wh.PropertyValue = String.Concat(wh.PropertyValue, ")");
-                pcount++;
-                query = ApplyBlock(query, wh, pcount);
-            }
-            /*build LIKE clause, if applicable*/
-            var like = criteria.Where(w => String.Equals(w.Node, c, sc) && String.Equals(w.ItemKey, "like", sc)).ToList();
-            if (like.Count > 0)
-            {
-                wh.Operator = like.First(w => String.Equals(w.ItemKey, "like", sc)).ItemKey;
-                wh.PropertyValue = String.Format("'{0}'", like.First(w => String.Equals(w.ItemKey, "like", sc)).ItemValue);
-                wh.BlockType = blockType;
-                pcount++;
-                query = ApplyBlock(query, wh, pcount);
-            }
-            /*build BETWEEN clause, if applicable*/
-            List<JsonRow> between = criteria.Where(w => String.Equals(w.Node, c, sc) && (String.Equals(w.ItemKey, "between", sc) | String.Equals(w.ItemKey, "and", sc))).ToList();
-            if (between.Count > 0)
-            {
-                wh.Operator = "between";
-                wh.Index = "DateIndex";
-                wh.BlockType = blockType;
-                wh.PropertyValue = String.Format("'{0}' and '{1}'"
-                    , between.First(b => String.Equals(b.ItemKey, "between", sc)).ItemValue
-                    , between.First(b => String.Equals(b.ItemKey, "and", sc)).ItemValue);
-                pcount++;
-                query = ApplyBlock(query, wh, pcount);
-                wh.Index = "JsonIndex";
-            }
-        }
-        /*close out the search query*/
-        query.AppendFormat("\twhere [ix].[IndexName] = '{0}'", viewName);
-        return query.ToString();
-    }
-
-    /// <summary>
-    /// Return result row object from a document view selection function
-    /// </summary>
-    /// <param name="obj">The row returned from the function</param>
-    /// <param name="_id">The document id of the view returned</param>
-    /// <param name="view">The view document returned</param>
-    private static void MatchedViews(Object obj, out String _id, out String view)
-    {
-        Object[] column = (Object[])obj;
-        _id = (String)column[0];
-        view = (String)column[1];
-    }
-
-    //[SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "MatchedViews",
-    //    TableDefinition = "[_id] nvarchar(36), [view] nvarchar(max)")]
-    public static IEnumerable CriteriaSearch(String json)
-    {
-        ArrayList rows = new ArrayList();
-
-        using (SqlConnection cn = new SqlConnection("context connection = true"))
-        {
-            cn.Open();
-            SqlCommand command = new SqlCommand(BuildSearchCriteria(json), cn);
-            SqlDataReader dr = command.ExecuteReader();
-            while (dr.Read())
-            {
-                Object[] column = new Object[2];
-                column[0] = dr[0].ToString();
-                column[1] = dr[1].ToString();
-                rows.Add(column);
-            }
-        }
-        return rows;
-    }
-    
-    /// <summary>
-    /// returns a row containing the original value and the updated value resulting from an update of a document
-    /// </summary>
-    /// <param name="obj">The result row</param>
-    /// <param name="ItemKey">The item key included in the update</param>
-    /// <param name="Value_O">The original item value related to an item key included in an update</param>
-    /// <param name="Value_U">The new value related to the item key</param>
-    private static void ItemUpdateView(Object obj, out String ItemKey, out String Value_O, out String Value_U)
-    {
-        Object[] column = (Object[])obj;
-        ItemKey = (String)column[0];
-        Value_O = String.IsNullOrEmpty((String)column[1]) ? "null" : (String)column[1];
-        Value_U = String.IsNullOrEmpty((String)column[2]) ? "null" : (String)column[2];
-    }
-
-    //[SqlFunction()]
-    public static Boolean rxPivot(String json, String key, String value)
-    {
-        return Regex.IsMatch(json, value);
-    }
-
+{   
     /// <summary>
     /// returns true for each element matching the criteria supplied.
     /// </summary>
@@ -276,58 +21,15 @@ public partial class UserDefinedFunctions
     public static Boolean rxContains(String json, String value)
     {
         return Regex.IsMatch(json, value);
-    }
-
-    /// <summary>
-    /// extracts and selects the node key embedded in a collection of objects
-    /// </summary>
-    /// <param name="json"></param>
-    /// <returns></returns>
-    //[SqlFunction()]
-    public static String SelectKey(String json)
-    {
-        return rxKey.Match(json).Groups["nodeKey"].Value;
-    }
-
-    /// <summary>
-    /// returns a collection of urls merged as a result of two documents being combined or merged as one
-    /// </summary>
-    /// <param name="sourceUrl">The url of the element in the source document</param>
-    /// <param name="sourceKey">The item key of the element in the source document</param>
-    /// <param name="targetUrl">The url of the target element</param>
-    /// <returns></returns>
-    //[SqlFunction(FillRowMethodName = "MergedUrls",
-    //    TableDefinition = "Url nvarchar(500), Selector nvarchar(500)")]
-    public static IEnumerable MergeUrl(String sourceUrl, String sourceKey, String targetUrl)
-    {
-        ArrayList rows = new ArrayList();
-        Object[] column = new Object[2];
-        column[0] = String.Format("{0}:{1}{2}", sourceUrl.LastIndexOf("/").Equals(sourceUrl.Length - 1) ? sourceUrl.Remove(sourceUrl.Length - 1, 1) : sourceUrl, sourceKey, targetUrl);
-        column[1] = TemplateJsonUrl(column[0].ToString());
-        rows.Add(column);
-        return rows;
-    }
-
-    /// <summary>
-    /// return object form the MergeUrl function
-    /// </summary>
-    /// <param name="obj">result row form the MergeUrl function</param>
-    /// <param name="Url">The newly merged url</param>
-    /// <param name="Selector">The selector used to locate matches</param>
-    private static void MergedUrls(Object obj, out String Url, out String Selector)
-    {
-        Object[] column = (Object[])obj;
-        Url = (String)column[0];
-        Selector = (String)column[1];
-    }
-
+    }       
+    
     /// <summary>
     /// returns a collection of url row objects
     /// </summary>
     /// <param name="url">The url to be parsed or split into tabular format</param>
     /// <returns>IEnumerable</returns>
-    //[SqlFunction(FillRowMethodName = "ParsedUrlRows",
-    //TableDefinition = "Generation int, NodeKey nvarchar(36), Node nvarchar(100)")]
+    [SqlFunction(FillRowMethodName = "ParsedUrlRows",
+    TableDefinition = "Generation int, Node nvarchar(200)")]
     public static IEnumerable ParseUrl(String url)
     {
         ArrayList rows = new ArrayList();
@@ -349,7 +51,6 @@ public partial class UserDefinedFunctions
                         {
                             gen++;
                             row.Generation = gen;
-                            row.NodeKey = rxKeyInUrl.Match(cap.Value).Groups["NodeKey"].Value;
                             row.Node = rxKeyInUrl.Match(cap.Value).Groups["Node"].Value;
                         }
                         rows.Add(row);
@@ -365,13 +66,11 @@ public partial class UserDefinedFunctions
     /// </summary>
     /// <param name="row">The url row</param>
     /// <param name="Generation">The depth of the node from the root in which an element was located</param>
-    /// <param name="NodeKey">The node element's key id</param>
     /// <param name="Node">The node element name or type</param>
-    private static void ParsedUrlRows(Object row, out Int32 Generation, out String NodeKey, out String Node)
+    private static void ParsedUrlRows(Object row, out Int32 Generation, out String Node)
     {
         UrlAncestry col = (UrlAncestry)row;
         Generation = (Int32)(col.Generation);
-        NodeKey = (String)(col.NodeKey);
         Node = (String)(col.Node);
     }
 
@@ -531,7 +230,15 @@ public partial class UserDefinedFunctions
             /*update the url*/
             if (r.ItemType == "object" || r.ItemType == "array")
             {
-                r.Node = String.Format("{0}.{1}", eroot.Node, r.ItemKey);
+                if (String.IsNullOrEmpty(r.ItemKey))
+                {
+                    r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);   
+                }
+                else
+                {
+                    r.Node = String.Format("{0}.{1}", eroot.Node, r.ItemKey);
+                }
+                
             }
             else
             {

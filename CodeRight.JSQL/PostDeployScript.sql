@@ -222,20 +222,19 @@ GO
 --GO
 
 
---/****** Object:  UserDefinedFunction [dbo].[ParseUrl]    Script Date: 02/05/2012 22:10:41 ******/
---IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ParseUrl]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
---DROP FUNCTION [dbo].[ParseUrl]
---GO
+/****** Object:  UserDefinedFunction [dbo].[ParseUrl]    Script Date: 02/05/2012 22:10:41 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ParseUrl]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[ParseUrl]
+GO
 
---/****** Object:  UserDefinedFunction [dbo].[ParseUrl]    Script Date: 02/05/2012 22:10:41 ******/
---CREATE FUNCTION [dbo].[ParseUrl](@url [nvarchar](500))
---RETURNS  TABLE (
---	[Generation] [int] NULL,
---	[NodeKey] [nvarchar](36) NULL,
---	[Node] [nvarchar](100) NULL
---) WITH EXECUTE AS CALLER
---EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ParseUrl]
---GO
+/****** Object:  UserDefinedFunction [dbo].[ParseUrl]    Script Date: 02/05/2012 22:10:41 ******/
+CREATE FUNCTION [dbo].[ParseUrl](@url [nvarchar](500))
+RETURNS  TABLE (
+	[Generation] [int] NULL,
+	[Node] [nvarchar](100) NULL
+) WITH EXECUTE AS CALLER
+EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ParseUrl]
+GO
 
 --/****** Object:  UserDefinedFunction [dbo].[CriteriaSearch]    Script Date: 05/18/2013 15:25:42 ******/
 --IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CriteriaSearch]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))

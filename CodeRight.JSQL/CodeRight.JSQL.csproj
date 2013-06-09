@@ -50,11 +50,9 @@
   <ItemGroup>
     <Compile Include="ToJson_bak.cs" />
     <Compile Include="CryptoManager.cs" />
-    <Compile Include="DataAccess.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="JsonCore.cs" />
     <Compile Include="SqlSecure.cs" />
-    <Compile Include="JsonIndex.cs" />
     <Compile Include="JsonRegex.cs" />
     <Compile Include="JsonStruct.cs" />
     <Compile Include="OpenSslCompatDeriveBytes.cs" />
