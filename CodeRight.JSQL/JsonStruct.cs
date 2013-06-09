@@ -25,10 +25,4 @@ public partial class UserDefinedFunctions
             this.ItemType = "object";
         }
     }
-
-    public struct UrlAncestry
-    {
-        public Int32 Generation;
-        public String Node;
-    }
 }

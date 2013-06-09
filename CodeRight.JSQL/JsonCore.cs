@@ -21,58 +21,7 @@ public partial class UserDefinedFunctions
     public static Boolean rxContains(String json, String value)
     {
         return Regex.IsMatch(json, value);
-    }       
-    
-    /// <summary>
-    /// returns a collection of url row objects
-    /// </summary>
-    /// <param name="url">The url to be parsed or split into tabular format</param>
-    /// <returns>IEnumerable</returns>
-    [SqlFunction(FillRowMethodName = "ParsedUrlRows",
-    TableDefinition = "Generation int, Node nvarchar(200)")]
-    public static IEnumerable ParseUrl(String url)
-    {
-        ArrayList rows = new ArrayList();
-        string[] groups = rxUrlAncestry.GetGroupNames();
-        Int32 gen = 0;
-        foreach (Match m in rxUrlAncestry.Matches(url))
-        {
-            /*step through each object extracted from the url and reassemble it, replacing the UUID's with placeholders*/
-            foreach (string s in groups)
-            {
-                Group g = m.Groups[s];
-                CaptureCollection cc = g.Captures;
-                foreach (Capture cap in cc)
-                {
-                    if (String.Equals(s, "Object", sc))
-                    {
-                        UrlAncestry row = new UrlAncestry();
-                        if (rxKeyInUrl.IsMatch(cap.Value))
-                        {
-                            gen++;
-                            row.Generation = gen;
-                            row.Node = rxKeyInUrl.Match(cap.Value).Groups["Node"].Value;
-                        }
-                        rows.Add(row);
-                    }
-                }
-            }
-        }
-        return rows;
-    }
-
-    /// <summary>
-    /// The resulting row from a ParseUrl function call
-    /// </summary>
-    /// <param name="row">The url row</param>
-    /// <param name="Generation">The depth of the node from the root in which an element was located</param>
-    /// <param name="Node">The node element name or type</param>
-    private static void ParsedUrlRows(Object row, out Int32 Generation, out String Node)
-    {
-        UrlAncestry col = (UrlAncestry)row;
-        Generation = (Int32)(col.Generation);
-        Node = (String)(col.Node);
-    }
+    }  
 
     /// <summary>
     /// Parses JSON into a tabular format.
