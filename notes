@@ -1,0 +1,14 @@
+Special thanks to Phil Factor of Simple Talk for his article found here: https://www.simple-talk.com/sql/t-sql-programming/consuming-json-strings-in-sql-server/
+
+Although J-SQL and the solution presented in Phil's article are very different, having his example available provided the clarity I needed to improve my solution and solve some issues I had struggled to envision.
+
+"J-SQL", which I also refer to as "JinSQL" interchangeably, addresses a wide range of needs and offers immense possibilities. As the popularity of document datastores have grown their utility in a wider number of implementations becomes increasingly better understood and applied. More and more solutions to some of the so-called short-comings are being solved and published. I have maintained these short-comings aren't really short comings at all but merely undiscovered implementations. I suspect as time moves on more and more of the capabilities or advantages relational database solutions hold over their document counter-parts will be dissolve as more and more developers discover "how to" match these features in document stores.
+
+I believe J-SQL offers SQL Server developers an opportunity to begin working with and managing JSON as a storage format by leveraging what we already know and understand about databases with the very easy to understand structure of JavaScript Object Notation.
+
+JSQL also provides a robust and intelligent work-around for the limitations of the Table Valued Parameter (TVP) and the inability of passing a table into a CLR function, procedure, or aggregate as a parameter. As I have time, I will begin documenting how I have leveraged this library. In the meantime, I have provided some illustrations in the J-SQL test.sql file.
+
+I also recommend you follow my example and create a separate database in which all J-SQL schema is created. I call mine Utilities and have provided the T-SQL you need to create such a store. 
+
+(to be continued...)
+
