@@ -62,20 +62,6 @@ public partial class UserDefinedFunctions
         ItemKey = (String)(col.ItemKey);        
         ItemValue = (String)(col.ItemValue);
         ItemType = (String)(col.ItemType);
-        switch (ItemType)
-        {
-            case"array":
-                //ItemValue = String.Concat("{", "@JArray", ObjectID, "}");
-                break;
-            case "object":
-                //ItemValue = String.Concat("{", "@JObject", ObjectID, "}");
-                break;
-            case "null":
-                ItemValue = "null";
-                break;
-            default:
-                break;
-        }
     }
 
     /// <summary>
@@ -165,7 +151,7 @@ public partial class UserDefinedFunctions
             /*nulls*/
             else if (String.IsNullOrEmpty(row.ItemValue))
             {
-                row.ItemValue = null;
+                row.ItemValue = "null";
                 row.ItemType = "null";
             }
             
