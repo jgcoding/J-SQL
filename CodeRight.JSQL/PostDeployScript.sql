@@ -114,7 +114,13 @@ BEGIN
 	-- Declare the return variable here
 	DECLARE @json nvarchar(max), @nodeid int, @jsonOut jsonTable;
 	insert @jsonOut
-		select [parentId], [objectId], [node], [itemKey], [itemValue], [itemType] 
+		select [parentId], [objectId], [node], [itemKey], 
+		case [itemType] 
+			when 'array' then '{@JArray'+cast([objectId] as varchar(10))+'}'
+			when 'object' then '{@JObject'+cast([objectId] as varchar(10))+'}'
+			else [itemValue] end
+		[itemValue], 
+		[itemType] 
 			from @jsonTable
 	while 1=1
 		begin
