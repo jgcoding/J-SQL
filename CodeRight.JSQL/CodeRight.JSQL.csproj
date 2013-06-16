@@ -72,6 +72,13 @@
       <SubType>Content</SubType>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Regular Expression\rxJsonAll.xso" />
+    <None Include="Regular Expression\rxJsonAll_experiment.xso" />
+    <None Include="Regular Expression\rxJsonAll_master.xso" />
+    <None Include="Regular Expression\rxJsonAll_old.xso" />
+    <None Include="Regular Expression\rxJsonAll_oldWorking.xso" />
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

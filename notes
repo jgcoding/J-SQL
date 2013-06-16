@@ -1,21 +1,4 @@
-Special thanks to Phil Factor of Simple Talk for his article found here: https://www.simple-talk.com/sql/t-sql-programming/consuming-json-strings-in-sql-server/
-
-Although J-SQL and the solution presented in Phil's article are very different, having his example available provided the clarity I needed to improve my solution and solve some issues I had struggled to envision.
-
-LIMITATIONS AND KNOWN ISSUES:
-
-
-J-SQL does have some minor limitations on which I haven't found the need personally to overcome but I know they need to be addressed. Perhaps one of you may provide the solution.
-
-At this time, J-SQL hates preceding spaces, line-feeds, tabs or any other "invisible" characters which may occur before or after one of the valid JSON delimiters, i.e. "{[]}: and ,. I simply haven't updated the regular expression I use recursively to ignore these special characters as the string is being parsed.
-
-The work around in the meantime is to "compress" the string or otherwise remove these characters preceding any valid JSON delimiter such as what JSONLint.org does with its JSON compressor found here: http://jsonlint.com/?reformat=compress. Only characters preceding a delimiter must be removed. When these characters exist within a properly quoted string item value they do not pose a problem for the parser. I need only figure out how to update the regex to ignore them in those places or to remove them before apply the regex.
-
-If your string is compressed by this tool or in the manner in which it does so the parser is capable of handling any level of nesting or complexity you throw at it. My next wish item is to deal with this.
-
-
-You are invited to provide an updated regex or splitter which will accomplish this in the meantime.
-
+Special thanks to Phil Factor of Simple Talk for his article found here: https://www.simple-talk.com/sql/t-sql-programming/consuming-json-strings-in-sql-server/. Although J-SQL and the solution presented in Phil's article are very different, having his example available provided the clarity I needed to improve my solution and to solve some issues, the solutions for which I had struggled to envision.
 
 "J-SQL", which I also refer to as "JinSQL" interchangeably, addresses a wide range of needs and offers immense possibilities. As the popularity of document datastores have grown their utility in a wider number of implementations becomes increasingly better understood and applied. More and more solutions to some of the so-called short-comings are being solved and published. I have maintained these short-comings aren't really short comings at all but merely undiscovered implementations. I suspect as time moves on more and more of the capabilities or advantages relational database solutions hold over their document counter-parts will be dissolve as more and more developers discover "how to" match these features in document stores.
 

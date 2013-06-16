@@ -135,6 +135,7 @@ Select * from dbo.ToJsonTable(@json);
 
 --check the results (comment this out when measuring/comparing perf)
 select * from @jsonTable
+--where itemType in ('object','array')
 
 --set @endtime = Utilities.dbo.ToUnixTime(getdate())
 --select (@endtime - @starttime)
@@ -142,12 +143,12 @@ select * from @jsonTable
 
 --now, convert the table result set back into a JSON string:
 --select @json = dbo.ToJsonT(@jsonTable)--phil factor
---select @json = dbo.ToJson(@jsonTable,0) 
+select @json = dbo.ToJson(@jsonTable,0) 
 
 --verify the results are clean at either http://www.bodurov.com/JsonFormatter/ or http://jsonlint.org/
---select @json
---as [processing-instruction(x)]
---for xml path('')
+select @json
+as [processing-instruction(x)]
+for xml path('')
 
 -- end the timer and print the results
 --set @endtime = Utilities.dbo.ToUnixTime(getdate())
