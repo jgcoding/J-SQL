@@ -6,8 +6,8 @@ using System.Text.RegularExpressions;
 
 public partial class UserDefinedFunctions
 {
-    public static readonly Regex rxJsonAll = new Regex(
-            "\"(?<ItemKey>(?:\\^{0,1})[\\.\\*a-zA-Z0-9/\\-\\s\\#{}:/_]*/{0,1})\":(?<ItemValue" +
+    public static readonly Regex rxJsonAll_old = new Regex(
+            "\"(?<itemKey>(?:\\^{0,1})[\\.\\*a-zA-Z0-9/\\-\\s\\#{}:/_]*/{0,1})\":(?<itemValue" +
             ">(?>\"([^\\\\\"]|\\\\\\\\|\\\\\")*\")|\\[(?>\\{(?>[^{}]+" +
             "|\\{(?<Element>)|\\}(?<-Element>))*(?(Element)(?!))(?:\\}[,]" +
             "*))*(?>\"(?>[^\\\"]+|\"(?<Element>)|\"(?<-Element>))*(?(El" +
@@ -22,20 +22,21 @@ public partial class UserDefinedFunctions
         | RegexOptions.Compiled
     );
 
-    public static readonly Regex rxJsonAll2 = new Regex(
-      "\"(?<ItemKey>(?:\\^{0,1})[\\.\\*a-zA-Z0-9/\\-\\s\\#{}:/_]*/{" +
-      "0,1})\":(?<ItemValue>(?>\"(?:[^\\\\\"]|\\\\\\\\|\\\\\")*\")|" +
-      "\\[(?>\\{(?>[^{}]+|\\{(?<Element>)|\\}(?<-Element>))*(?(Elem" +
-      "ent)(?!))(?:\\}[,]*))*(?>\"(?>[^\\\"]+|\"(?<Element>)|\"(?<-" +
-      "Element>))*(?(Element)(?!))(?:\"[,]*))*(?>-{0,1}\\d*[.\\d+][" +
-      ",]*)*\\]|\\{(?>[^{}]+|\\{(?<Element>)|\\}(?<-Element>))*(?(E" +
-      "lement)(?!))\\}|(?>true|false)|(?>-{0,1}\\d*[.\\d+])*)",
-    RegexOptions.CultureInvariant
+    public static readonly Regex rxJsonAll = new Regex(
+      "\"(?<itemKey>(?:\\^{0,1})[\\.\\*a-zA-Z0-9/\\-\\s\\#{}:/_]*/{" +
+      "0,1})\":\\s*(?<itemValue>\r\n\\[(?>[^\\[\\]]+|\\[ (?<element>)" +
+      "|\\](?<-element>))*(?(element)(?!))\\]\r\n|\\{(?>[^\\{\\}]+|\\{" +
+      " (?<element>)|\\} (?<-element>))*(?(element)(?!))\\}\r\n|(?>\"(" +
+      "?:[^\\\\\"]|\\\\\\\\|\\\\\")*\")\r\n|(?>true|false)\r\n|(?>-{0,1" +
+      "}\\d*[.\\d+])*)\r\n|(?<itemValue>(?>\\{(?>[^{}]+|\\{(?<element" +
+      ">)|\\}(?<-element>))*(?(element)(?!))\\}+))",
+    RegexOptions.IgnoreCase
+    | RegexOptions.CultureInvariant
+    | RegexOptions.IgnorePatternWhitespace
     | RegexOptions.Compiled
     );
 
-   
- 
+     
     public static readonly Regex rxIncludedKey = new Regex(
             "(?:\"(?<IncludedKey>[\\*a-zA-Z0-9]*/{1})\":\"(?<DocumentID>[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})\"){1,}",
         RegexOptions.IgnoreCase
@@ -56,8 +57,8 @@ public partial class UserDefinedFunctions
     public static readonly Regex rxUrl = new Regex(
         "(?<Url>(?:/(?<Node>[\\*a-zA-Z0-9]*/{0,1}):(?<NodeKey>" +
         "(?<=:)[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-" +
-        "9]{4}-[a-zA-Z0-9]{12}))+/(?<ItemKey>[\\*a-zA-Z0-9]*/{0,1})|/" +
-        "(?<ItemKey>[\\*a-zA-Z0-9]*/{0,1}))",
+        "9]{4}-[a-zA-Z0-9]{12}))+/(?<itemKey>[\\*a-zA-Z0-9]*/{0,1})|/" +
+        "(?<itemKey>[\\*a-zA-Z0-9]*/{0,1}))",
     RegexOptions.IgnoreCase
     | RegexOptions.CultureInvariant
     | RegexOptions.IgnorePatternWhitespace

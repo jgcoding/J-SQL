@@ -195,7 +195,7 @@ public partial class UserDefinedFunctions
     /// <param name="misc">Miscellaneous criteria, such as GROUP BY, HAVING or any other valid SQL operator. </param>
     /// <returns></returns>
     [SqlFunction(DataAccess = DataAccessKind.Read, SystemDataAccess = SystemDataAccessKind.Read, FillRowMethodName = "StringifiedRows",
-      TableDefinition = "ItemID uniqueidentifier, ItemValue NVARCHAR(MAX)")]
+      TableDefinition = "ItemID uniqueidentifier, itemValue NVARCHAR(MAX)")]
     public static IEnumerable SqlStringifyRow(String objName, String pKeyName, SqlGuid pKeyValue, String cols, String where, String misc)
     {
         String[] objrx = new String[] { "." };

@@ -29,14 +29,14 @@ public partial class UserDefinedFunctions
     /// <param name="json">The JSON to be parsed into a tabular format</param>
     /// <returns>IEnumerable of JSON rows</returns>
     [SqlFunction(FillRowMethodName = "ParsedRows",
-    TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), ItemKey nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25)")]
+    TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), itemKey nvarchar(100), itemValue nvarchar(max), itemType nvarchar(25)")]
     public static IEnumerable ToJsonTable(String json)
     {        
         /*initialize the collection with the root containing the entire json object*/
-        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, ItemValue = json };
+        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, itemValue = json };
 
         var rows = ParseJson(root, 1);
-        root = new JsonRow { ParentID = 0, ObjectID = 1, ItemValue = String.Empty, ItemType = "object"};
+        root = new JsonRow { ParentID = 0, ObjectID = 1, itemValue = String.Empty, itemType = "object"};
         rows.Add(root);
         return rows;
     }
@@ -48,20 +48,20 @@ public partial class UserDefinedFunctions
     /// <param name="ParentID">The temporary id number of the parsed elements parent</param>
     /// <param name="ObjectID">The temporary id of the node</param>
     /// <param name="Node">The name of the object in which an element resides. Includes the object itself</param>
-    /// <param name="ItemKey">The item key in a key-value pairing</param>
-    /// <param name="ItemValue">The item value in a key-value pairing</param>
-    /// <param name="ItemType">The item type in a key-value pairing</param>
+    /// <param name="itemKey">The item key in a key-value pairing</param>
+    /// <param name="itemValue">The item value in a key-value pairing</param>
+    /// <param name="itemType">The item type in a key-value pairing</param>
     /// Serves the same purpose as a WHERE clause template. </param>
     private static void ParsedRows(Object row, out Int32 ParentID, out Int32 ObjectID,
-    out String Node, out String ItemKey, out String ItemValue, out String ItemType)
+    out String Node, out String itemKey, out String itemValue, out String itemType)
     {
         JsonRow col = (JsonRow)row;
         ParentID = (Int32)(col.ParentID);
         ObjectID = (Int32)(col.ObjectID);
         Node = (String)(col.Node);
-        ItemKey = (String)(col.ItemKey);        
-        ItemValue = (String)(col.ItemValue);
-        ItemType = (String)(col.ItemType);
+        itemKey = (String)(col.itemKey);        
+        itemValue = (String)(col.itemValue);
+        itemType = (String)(col.itemType);
     }
 
     /// <summary>
@@ -78,81 +78,81 @@ public partial class UserDefinedFunctions
         // list of nested rows within the row
         List<JsonRow> irows = new List<JsonRow>();
 
-        if (eroot.ItemValue.StartsWith("{"))
+        if (eroot.itemValue.StartsWith("{"))
         {
             // the element is an object
-            eroot.ItemValue = eroot.ItemValue.Substring(1, eroot.ItemValue.Length - 2);
+            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
         }
-        else if (eroot.ItemValue.StartsWith("["))
+        else if (eroot.itemValue.StartsWith("["))
         {
             // the element is an array
-            eroot.ItemValue = eroot.ItemValue.Substring(1, eroot.ItemValue.Length - 2);
+            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
         }
         else
         {
             return rows.ToList();
         }
 
-        foreach (Match m in rxJsonAll.Matches(eroot.ItemValue))
+        foreach (Match m in rxJsonAll.Matches(eroot.itemValue))
         {
             JsonRow row = new JsonRow
             {
                 ParentID = eroot.ParentID,
                 ObjectID = 0,
-                ItemKey = m.Groups["ItemKey"].Value,
-                ItemValue = m.Groups["ItemValue"].Value
+                itemKey = m.Groups["itemKey"].Value,
+                itemValue = m.Groups["itemValue"].Value
             };
             
-            if (row.ItemValue.StartsWith("\"") && !row.ItemValue.StartsWith("\"@"))
+            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
             {
                 /*first, verify the value isn't an empty quoted string*/
-                if (row.ItemValue.Equals("\"\""))
+                if (row.itemValue.Equals("\"\""))
                 {
-                    row.ItemValue = String.Empty;
+                    row.itemValue = String.Empty;
                 }
                 else
                 {
                     /*remove quotes from the value*/
-                    row.ItemValue = row.ItemValue.Substring(1, row.ItemValue.Length - 2);
+                    row.itemValue = row.itemValue.Substring(1, row.itemValue.Length - 2);
                 }
-                row.ItemType = "string";
+                row.itemType = "string";
             }
             /*array*/
-            else if (row.ItemValue.StartsWith("[") | row.ItemValue.StartsWith("\"@"))
+            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
             {
                 /*increment the newID*/
                 newID++;
                 row.ObjectID = newID;
-                row.ItemType = "array";
+                row.itemType = "array";
             }
             /*object*/
-            else if (row.ItemValue.StartsWith("{"))
+            else if (row.itemValue.StartsWith("{"))
             {
                 /*increment the newID*/
                 newID++;
                 row.ObjectID = newID;
-                row.ItemType = "object";
+                row.itemType = "object";
             }
             /*boolean*/
-            else if (String.Equals(row.ItemValue, "true", sc) | String.Equals(row.ItemValue, "false", sc))
+            else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
             {
-                row.ItemType = "bool";
+                row.itemType = "bool";
             }
             /*floats*/
-            else if (Regex.IsMatch(row.ItemValue, "^-{0,1}\\d*\\.[\\d]+$") && !String.Equals(row.ItemType, "string", sc))
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}\\d*\\.[\\d]+$") && !String.Equals(row.itemType, "string", sc))
             {
-                row.ItemType = "float";
+                row.itemType = "float";
             }
             /*int*/
-            else if (Regex.IsMatch(row.ItemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$") && !String.Equals(row.ItemType, "string", sc))
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$") && !String.Equals(row.itemType, "string", sc))
             {
-                row.ItemType = "int";
+                row.itemType = "int";
             }
             /*nulls*/
-            else if (String.IsNullOrEmpty(row.ItemValue))
+            else if (String.IsNullOrEmpty(row.itemValue))
             {
-                row.ItemValue = "null";
-                row.ItemType = "null";
+                row.itemValue = "null";
+                row.itemType = "null";
             }
             
             /*add the parsed element to the output collection*/
@@ -163,15 +163,15 @@ public partial class UserDefinedFunctions
         foreach (JsonRow r in rows)
         {            
             /*update the url*/
-            if (r.ItemType == "object" || r.ItemType == "array")
+            if (r.itemType == "object" || r.itemType == "array")
             {
-                if (String.IsNullOrEmpty(r.ItemKey))
+                if (String.IsNullOrEmpty(r.itemKey))
                 {
                     r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);   
                 }
                 else
                 {
-                    r.Node = String.Format("{0}.{1}", eroot.Node, r.ItemKey);
+                    r.Node = String.Format("{0}.{1}", eroot.Node, r.itemKey);
                 }
                 
             }
@@ -181,14 +181,14 @@ public partial class UserDefinedFunctions
             }
 
             // double back and handle the array and/or the object rows
-            switch (r.ItemType.CompareString())
+            switch (r.itemType.CompareString())
             {
                 case "array":
                     List<JsonRow> iobj = new List<JsonRow>();
-                    if (r.ItemValue.StartsWith("[{") && rxParseArrayOfObjects.IsMatch(r.ItemValue))
+                    if (r.itemValue.StartsWith("[") && rxParseArrayOfObjects.IsMatch(r.itemValue))
                     {
                         Int32 oIndex = 0;
-                        foreach (Match o in rxParseArrayOfObjects.Matches(r.ItemValue))
+                        foreach (Match o in rxParseArrayOfObjects.Matches(r.itemValue))
                         {
                             newID++;/*increment the objectID*/
                             /*add the nested parent array object*/
@@ -196,10 +196,10 @@ public partial class UserDefinedFunctions
                             aroot.ParentID = r.ObjectID;
                             aroot.ObjectID = newID;
                             aroot.Node = String.Format("{0}[{1}]", r.Node, oIndex);
-                            //aroot.ItemKey = r.ItemKey;
-                            aroot.ItemKey = String.Empty;
-                            aroot.ItemValue = o.Value;
-                            aroot.ItemType = "object";
+                            //aroot.itemKey = r.itemKey;
+                            aroot.itemKey = String.Empty;
+                            aroot.itemValue = o.Value;
+                            aroot.itemType = "object";
 
                             /*add the nested parent array object*/
                             iobj.Add(aroot);
@@ -213,9 +213,9 @@ public partial class UserDefinedFunctions
                             aoroot.ParentID = aorow.ObjectID;
                             aoroot.ObjectID = newID;
                             aoroot.Node = aorow.Node;
-                            //aoroot.ItemKey = aorow.ItemKey;
-                            aoroot.ItemKey = String.Empty;
-                            aoroot.ItemValue = String.IsNullOrEmpty(aorow.ItemValue) ? "object" : aorow.ItemValue;
+                            //aoroot.itemKey = aorow.itemKey;
+                            aoroot.itemKey = String.Empty;
+                            aoroot.itemValue = String.IsNullOrEmpty(aorow.itemValue) ? "object" : aorow.itemValue;
 
                             /*add the nested elements within the nested parent array object*/
                             irows.AddRange(ParseJson(aoroot, newID).Cast<JsonRow>());
@@ -225,27 +225,27 @@ public partial class UserDefinedFunctions
                         }
                     }
                     /*process simple arrays*/
-                    else if (r.ItemValue.StartsWith("[") && !r.ItemValue.StartsWith("[{"))
+                    else if (r.itemValue.StartsWith("[") && !rxParseArrayOfObjects.IsMatch(r.itemValue))
                     {
                         /*verify this isn't an empty array*/
-                        if (!r.ItemValue.Equals("[]"))
+                        if (!r.itemValue.Equals("[]"))
                         {
                             /*initialize the array element counter*/
                             Int32 ai = 0;
                             List<String> items = new List<String>();
                             /*determine whether a simple string or a numberic array*/
                             String itype = String.Empty;
-                            if (rxSimpleStringArray.IsMatch(r.ItemValue))
+                            if (rxSimpleStringArray.IsMatch(r.itemValue))
                             {
-                                foreach (Match s in rxSimpleStringArray.Matches(r.ItemValue))
+                                foreach (Match s in rxSimpleStringArray.Matches(r.itemValue))
                                 {
                                     items.Add(s.Groups["ArrayItem"].Value);
                                 }
                                 itype = "string";
                             }
-                            else if (rxSimpleNumericArray.IsMatch(r.ItemValue))
+                            else if (rxSimpleNumericArray.IsMatch(r.itemValue))
                             {
-                                foreach (Match s in rxSimpleNumericArray.Matches(r.ItemValue))
+                                foreach (Match s in rxSimpleNumericArray.Matches(r.itemValue))
                                 {
                                     items.Add(s.Groups["ArrayItem"].Value);
                                 }
@@ -258,9 +258,9 @@ public partial class UserDefinedFunctions
                                 sa.ParentID = r.ObjectID;
                                 sa.ObjectID = 0;
                                 sa.Node = String.Format("{0}[{1}]", r.Node, ai);
-                                sa.ItemKey = String.Empty;
-                                sa.ItemValue = item;
-                                sa.ItemType = itype;
+                                sa.itemKey = String.Empty;
+                                sa.itemValue = item;
+                                sa.itemType = itype;
                                 /*add the nested parent array object*/
                                 iobj.Add(sa);
                                 ai++;/*increment the array item index*/
@@ -276,8 +276,8 @@ public partial class UserDefinedFunctions
                     oroot.ParentID = r.ObjectID;
                     oroot.ObjectID = newID;
                     oroot.Node = r.Node;
-                    oroot.ItemKey = r.ItemKey;
-                    oroot.ItemValue = r.ItemValue;
+                    oroot.itemKey = r.itemKey;
+                    oroot.itemValue = r.itemValue;
 
                     /*add the nested elements to the outer collection*/
                     irows.AddRange(ParseJson(oroot, newID).Cast<JsonRow>());
@@ -316,7 +316,7 @@ public partial class UserDefinedFunctions
     /// "Url" is the complete address of an Item in a parsed collection of JSON elements.
     /// "Node" represents each object or array within the hierarchy of the URL.
     /// "NodeKey" represents UUID for each object or array providing ownership and identifiable differences within a collection of the same.
-    /// "ItemKey" is the key in the key/value pair of any Json element.
+    /// "itemKey" is the key in the key/value pair of any Json element.
     /// </summary>
     /// <param name="url">JsonUrl for a parsed Json element</param>
     //[SqlFunction()]
@@ -338,8 +338,8 @@ public partial class UserDefinedFunctions
                     {
                         template.AppendFormat(".{0}[{1}]", cap.Value, "{0}");
                     }
-                    /*If this is a captured ItemKey from the Url.*/
-                    if (String.Equals(s, "itemkey", sc))
+                    /*If this is a captured itemKey from the Url.*/
+                    if (String.Equals(s, "itemKey", sc))
                     {
                         template.AppendFormat(".{0}", cap.Value);
                     }

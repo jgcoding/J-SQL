@@ -36,9 +36,9 @@ RETURNS  TABLE (
 	[ParentID] [int] NULL,
 	[ObjectID] [int] NULL,
 	[Node] [nvarchar](500) NULL,
-	[ItemKey] [nvarchar](500) NULL,
-	[ItemValue] [nvarchar](max) NULL,
-	[ItemType] [nvarchar](25) NULL
+	[itemKey] [nvarchar](500) NULL,
+	[itemValue] [nvarchar](max) NULL,
+	[itemType] [nvarchar](25) NULL
 ) WITH EXECUTE AS CALLER
 AS 
 EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ToJsonTable]
@@ -266,15 +266,15 @@ GO
 --DROP FUNCTION [dbo].[RxIndexJson]
 --GO
 
-----NodeKey nvarchar(36), Url nvarchar(500), Label nvarchar(100), ItemValue nvarchar(max), ItemType nvarchar(25), Selector nvarchar(500), Filter nvarchar(500), IsVisible bit
+----NodeKey nvarchar(36), Url nvarchar(500), Label nvarchar(100), itemValue nvarchar(max), itemType nvarchar(25), Selector nvarchar(500), Filter nvarchar(500), IsVisible bit
 --CREATE FUNCTION [dbo].[rxIndexJson](@docname [nvarchar](100), @json [nvarchar](max), @index [nvarchar](max))
 --RETURNS  TABLE (
 --	[DocumentName] [nvarchar](100) NULL,
 --	[NodeKey] [nvarchar](36) NULL,
 --	[Url] [nvarchar](500) NULL,
 --	[Label] [nvarchar](100) NULL,
---	[ItemValue] [nvarchar](max) NULL,
---	[ItemType] [nvarchar](25) NULL,
+--	[itemValue] [nvarchar](max) NULL,
+--	[itemType] [nvarchar](25) NULL,
 --	[Selector] [nvarchar](500) NULL,
 --	[Filter] [nvarchar](500) NULL,
 --	[IsVisible] [bit] NULL
