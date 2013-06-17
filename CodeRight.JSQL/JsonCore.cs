@@ -300,7 +300,7 @@ public partial class UserDefinedFunctions
     }
 
     /// <summary>
-    /// An experimental, work-in-progress effort to return a list of strongly-typed row objects mnore efficiently than
+    /// An experimental, work-in-progress effort to return a list of strongly-typed row objects more efficiently than
     /// the original ParseJson
     /// </summary>
     /// <param name="eroot">A strongly-type row </param>
@@ -397,6 +397,7 @@ public partial class UserDefinedFunctions
         }
         return rows;
     }
+
     /// <summary>
     /// returns the last ObjectID from the inner collection
     /// </summary>
