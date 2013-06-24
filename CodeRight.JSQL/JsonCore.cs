@@ -31,12 +31,12 @@ public partial class UserDefinedFunctions
     [SqlFunction(FillRowMethodName = "ParsedRows",
     TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), itemKey nvarchar(100), itemValue nvarchar(max), itemType nvarchar(25)")]
     public static IEnumerable ToJsonTable(String json)
-    {
-        json = json.TrimStart(' ', '\t', '\r', '\n');
-        /*initialize the collection with the root containing the entire json object.*/
-        JsonRow root = new JsonRow { ParentID = 0, ObjectID = 1, Node = "root", itemKey = String.Empty, itemValue = json, itemType = json.StartsWith("[") ? "array" : "object" };
+    {        
+        /*initialize the collection with the root containing the entire json object*/
+        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, itemValue = json };
 
-        var rows = ParseJson(root, root.ObjectID);
+        var rows = ParseJson(root, root.ParentID);        
+        root = new JsonRow { ParentID = 0, ObjectID = 1, itemValue = String.Empty, itemType = json.StartsWith("[") ? "array" : "object" };
         rows.Add(root);
         return rows;
     }
@@ -78,18 +78,22 @@ public partial class UserDefinedFunctions
         // list of nested rows within the row
         List<JsonRow> irows = new List<JsonRow>();
 
-        var evalue = String.Empty;
-        if (eroot.itemType.Equals("object", sc) || eroot.itemType.Equals("array", sc))
+        if (eroot.itemValue.StartsWith("{"))
         {
-            // if the itemValue is an object or an array, crack it open 
-            evalue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
+            // the element is an object
+            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
+        }
+        else if (eroot.itemValue.StartsWith("["))
+        {
+            // the element is an array
+            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
         }
         else
         {
             return rows.ToList();
         }
 
-        foreach (Match m in rxJsonAll.Matches(evalue))
+        foreach (Match m in rxJsonAll.Matches(eroot.itemValue))
         {
             JsonRow row = new JsonRow
             {
@@ -98,9 +102,8 @@ public partial class UserDefinedFunctions
                 itemKey = m.Groups["itemKey"].Value,
                 itemValue = m.Groups["itemValue"].Value
             };
-            row.itemType = JsonType(row.itemValue);
-
-            if (row.itemType == "string")
+            
+            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.itemValue.Equals("\"\""))
@@ -112,13 +115,38 @@ public partial class UserDefinedFunctions
                     /*remove quotes from the value*/
                     row.itemValue = row.itemValue.Substring(1, row.itemValue.Length - 2);
                 }
+                row.itemType = "string";
             }
-            /*arrays and objects*/
-            else if (row.itemType == "array" | row.itemType == "object")
+            /*array*/
+            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
             {
                 /*increment the newID*/
                 newID++;
                 row.ObjectID = newID;
+                row.itemType = "array";
+            }
+            /*object*/
+            else if (row.itemValue.StartsWith("{"))
+            {
+                /*increment the newID*/
+                newID++;
+                row.ObjectID = newID;
+                row.itemType = "object";
+            }
+            /*boolean*/
+            else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
+            {
+                row.itemType = "bool";
+            }
+            /*floats*/
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}\\d*\\.[\\d]+$") && !String.Equals(row.itemType, "string", sc))
+            {
+                row.itemType = "float";
+            }
+            /*int*/
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$") && !String.Equals(row.itemType, "string", sc))
+            {
+                row.itemType = "int";
             }
             /*nulls*/
             else if (String.IsNullOrEmpty(row.itemValue))
@@ -272,79 +300,19 @@ public partial class UserDefinedFunctions
     }
 
     /// <summary>
-    /// Returns the data-type of an item value 
-    /// </summary>
-    /// <param name="value">The item value for which the type is to be determined</param>
-    /// <returns>String describing the items type</returns>
-    static String JsonType(String value)
-    {
-        /*nulls*/
-        if (String.IsNullOrEmpty(value))
-        {
-            value = "null";
-            return "null";
-        }
-        /*arrays*/
-        else if (value.StartsWith("["))
-        {
-            return "array";
-        }
-        /*object*/
-        else if (value.StartsWith("{"))
-        {
-            return "object";
-        }
-        else if (value.StartsWith("\""))
-        {
-            return "string";
-        }
-        /*boolean*/
-        else if (Regex.IsMatch(value, "^true|false"))
-        {
-            return "bool";
-        }
-        /*floats*/
-        else if (Regex.IsMatch(value, "^-{0,1}\\d*\\.[\\d]+$"))
-        {
-            return "float";
-        }
-        /*int*/
-        else if (Regex.IsMatch(value, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$"))
-        {
-            return "int";
-        }
-        else
-            return "object";
-    }
-
-    /// <summary>
     /// An experimental, work-in-progress effort to return a list of strongly-typed row objects more efficiently than
     /// the original ParseJson
     /// </summary>
     /// <param name="eroot">A strongly-type row </param>
     /// <param name="newID">The id of the parent node</param>
     /// <returns></returns>
-    private static List<JsonRow> ParseJson_n(JsonRow eroot, Int32 newID)
+    private static List<JsonRow> ParseJson_experimental(JsonRow eroot, Int32 newID)
     {
         // list of rows
         List<JsonRow> rows = new List<JsonRow>();
 
-        var etype = JsonType(eroot.itemValue);
-        var evalue = String.Empty;
-
-        if (etype == "object" || etype == "array")
-        {
-            // if the itemValue is an object or an array, crack it open 
-            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
-        }
-        else
-        {
-            return rows.ToList();
-        }
-
         foreach (Match m in rxJsonAll.Matches(eroot.itemValue))
         {            
-            // establish the elements base/default attributes
             JsonRow row = new JsonRow
             {
                 ParentID = eroot.ParentID,
@@ -352,14 +320,20 @@ public partial class UserDefinedFunctions
                 itemKey = m.Groups["itemKey"].Value,
                 itemValue = m.Groups["itemValue"].Value
             };
-            // determine the itemValues type:
-            row.itemType = JsonType(row.itemValue);
-
+            /*nulls*/
+            if (String.IsNullOrEmpty(row.itemValue))
+            {
+                row.itemValue = "null";
+                row.itemType = "null";
+            }
             /*arrays*/
-            if (row.itemType.Equals("array",sc))
-            {                
+            else if (row.itemValue.StartsWith("["))
+            {
+                /*set the internal element indexer*/
+                var incount = 0;
                 /*increment the newID*/
                 row.ObjectID = ++newID;
+                row.itemType = "array";
                 
                 /*an array of objects*/
                 if (rxParseArrayOfObjects.IsMatch(row.itemValue))
@@ -382,30 +356,13 @@ public partial class UserDefinedFunctions
                 /*TODO: an array of hexidecimal values [0x00a,0x02b]*/
             }
             /*object*/
-            else if (row.itemType.Equals("object", sc))
+            else if (row.itemValue.StartsWith("{"))
             {
-                /*add the current element to the list*/
-                rows.Add(eroot);
-
-                /*extract the inner values for further processing*/
-                var ivalue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
-
-                //foreach (Match om in rxJsonAll.Matches(ivalue)) { }
-                ///*initialize the nested elements root values*/
-                //JsonRow oroot = new JsonRow
-                //{
-                //    ParentID = eroot.ObjectID,
-                //    Node = r.Node,
-                //    itemKey = r.itemKey,
-                //    itemValue = r.itemValue
-                //};
-                ///*add the nested elements to the outer collection*/
-                //rows.AddRange(ParseJson(oroot, newID).Cast<JsonRow>());
-
-                ///*retrieve the last ObjectID from the inner collection*/
-                //newID = NewID(rows, irows);
+                /*increment the newID*/
+                row.ObjectID = ++newID;
+                row.itemType = "object";
             }
-            else if (row.itemType.Equals("string", sc))
+            else if (row.itemValue.StartsWith("\""))
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.itemValue.Equals("\"\""))
@@ -417,7 +374,24 @@ public partial class UserDefinedFunctions
                     /*remove quotes from the value*/
                     row.itemValue = row.itemValue.Substring(1, row.itemValue.Length - 2);
                 }
-            }    
+                row.itemType = "string";
+            }            
+            /*boolean*/
+            else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
+            {
+                row.itemType = "bool";
+            }
+            /*floats*/
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}\\d*\\.[\\d]+$") && !String.Equals(row.itemType, "string", sc))
+            {
+                row.itemType = "float";
+            }
+            /*int*/
+            else if (Regex.IsMatch(row.itemValue, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$") && !String.Equals(row.itemType, "string", sc))
+            {
+                row.itemType = "int";
+            }
+            /*TODO: hexidecimals and other scientific numbers*/
             /*add the parsed element to the output collection*/
             rows.Add(row);
         }
