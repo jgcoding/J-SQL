@@ -68,7 +68,7 @@ public partial class UserDefinedFunctions
         //start parsing the string into a collection
         var rows = ParseJson(root, root.ObjectID);
 
-        //reset the root parentID to zero. TODO: make this un-necessary
+        ////reset the root parentID to zero. TODO: make this un-necessary
         root.ParentID = 0;
 
         rows.Add(root);
@@ -90,11 +90,9 @@ public partial class UserDefinedFunctions
         List<JsonRow> irows = new List<JsonRow>();
 
         var evalue = eroot.itemValue;
-        var etype = JsonType(evalue);
-
-        if (etype == "object" || etype == "array")
+        if (evalue.StartsWith("{") || evalue.StartsWith("["))
         {
-            // if the itemValue is an array or an object, peel the outer braces off
+            // the element is an object
             evalue = evalue.Substring(1, evalue.Length - 2);
         }
         else
@@ -130,16 +128,14 @@ public partial class UserDefinedFunctions
             else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
             {
                 /*increment the newID*/
-                newID++;
-                row.ObjectID = newID;
+                row.ObjectID = ++newID;
                 row.itemType = "array";
             }
             /*object*/
             else if (row.itemValue.StartsWith("{"))
             {
                 /*increment the newID*/
-                newID++;
-                row.ObjectID = newID;
+                row.ObjectID = ++newID;
                 row.itemType = "object";
             }
             /*boolean*/
