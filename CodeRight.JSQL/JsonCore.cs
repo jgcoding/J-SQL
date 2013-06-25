@@ -21,24 +21,6 @@ public partial class UserDefinedFunctions
     public static Boolean rxContains(String json, String value)
     {
         return Regex.IsMatch(json, value);
-    }  
-
-    /// <summary>
-    /// Parses JSON into a tabular format.
-    /// </summary>
-    /// <param name="json">The JSON to be parsed into a tabular format</param>
-    /// <returns>IEnumerable of JSON rows</returns>
-    [SqlFunction(FillRowMethodName = "ParsedRows",
-    TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), itemKey nvarchar(100), itemValue nvarchar(max), itemType nvarchar(25)")]
-    public static IEnumerable ToJsonTable(String json)
-    {        
-        /*initialize the collection with the root containing the entire json object*/
-        JsonRow root = new JsonRow { ParentID = 1, ObjectID = 1, itemValue = json };
-
-        var rows = ParseJson(root, root.ParentID);        
-        root = new JsonRow { ParentID = 0, ObjectID = 1, itemValue = String.Empty, itemType = json.StartsWith("[") ? "array" : "object" };
-        rows.Add(root);
-        return rows;
     }
 
     /// <summary>
@@ -59,10 +41,39 @@ public partial class UserDefinedFunctions
         ParentID = (Int32)(col.ParentID);
         ObjectID = (Int32)(col.ObjectID);
         Node = (String)(col.Node);
-        itemKey = (String)(col.itemKey);        
+        itemKey = (String)(col.itemKey);
         itemValue = (String)(col.itemValue);
         itemType = (String)(col.itemType);
     }
+
+    /// <summary>
+    /// Parses JSON into a tabular format.
+    /// </summary>
+    /// <param name="json">The JSON to be parsed into a tabular format</param>
+    /// <returns>IEnumerable of JSON rows</returns>
+    [SqlFunction(FillRowMethodName = "ParsedRows",
+    TableDefinition = "ParentID int, ObjectID int, Node nvarchar(500), itemKey nvarchar(100), itemValue nvarchar(max), itemType nvarchar(25)")]
+    public static IEnumerable ToJsonTable(String json)
+    {
+        /*clear white spaces, tab, returns, and line-feeds from the beginning of the string.
+          Initialize the collection with the root containing the entire json object. */
+        var root = new JsonRow { 
+            ParentID = 1
+            , ObjectID = 1
+            , itemKey = String.Empty
+            , itemValue = json.TrimStart(' ', '\t', '\r', '\n')
+            , itemType = json.StartsWith("[") ? "array" : "object" 
+        };
+
+        //start parsing the string into a collection
+        var rows = ParseJson(root, root.ObjectID);
+
+        //reset the root parentID to zero. TODO: make this un-necessary
+        root.ParentID = 0;
+
+        rows.Add(root);
+        return rows;
+    }   
 
     /// <summary>
     /// Returns a list of strongly-typed row objects
@@ -78,22 +89,23 @@ public partial class UserDefinedFunctions
         // list of nested rows within the row
         List<JsonRow> irows = new List<JsonRow>();
 
-        if (eroot.itemValue.StartsWith("{"))
+        var evalue = eroot.itemValue;
+        if (evalue.StartsWith("{"))
         {
             // the element is an object
-            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
+            evalue = evalue.Substring(1, evalue.Length - 2);
         }
-        else if (eroot.itemValue.StartsWith("["))
+        else if (evalue.StartsWith("["))
         {
             // the element is an array
-            eroot.itemValue = eroot.itemValue.Substring(1, eroot.itemValue.Length - 2);
+            evalue = evalue.Substring(1, evalue.Length - 2);
         }
         else
         {
             return rows.ToList();
         }
 
-        foreach (Match m in rxJsonAll.Matches(eroot.itemValue))
+        foreach (Match m in rxJsonAll.Matches(evalue))
         {
             JsonRow row = new JsonRow
             {
@@ -311,8 +323,27 @@ public partial class UserDefinedFunctions
         // list of rows
         List<JsonRow> rows = new List<JsonRow>();
 
-        foreach (Match m in rxJsonAll.Matches(eroot.itemValue))
-        {            
+        // list of nested rows within the row
+        List<JsonRow> irows = new List<JsonRow>();
+
+        var evalue = eroot.itemValue;
+        if (evalue.StartsWith("{"))
+        {
+            // the element is an object
+            evalue = evalue.Substring(1, evalue.Length - 2);
+        }
+        else if (evalue.StartsWith("["))
+        {
+            // the element is an array
+            evalue = evalue.Substring(1, evalue.Length - 2);
+        }
+        else
+        {
+            return rows.ToList();
+        }
+
+        foreach (Match m in rxJsonAll.Matches(evalue))
+        {
             JsonRow row = new JsonRow
             {
                 ParentID = eroot.ParentID,
@@ -320,49 +351,8 @@ public partial class UserDefinedFunctions
                 itemKey = m.Groups["itemKey"].Value,
                 itemValue = m.Groups["itemValue"].Value
             };
-            /*nulls*/
-            if (String.IsNullOrEmpty(row.itemValue))
-            {
-                row.itemValue = "null";
-                row.itemType = "null";
-            }
-            /*arrays*/
-            else if (row.itemValue.StartsWith("["))
-            {
-                /*set the internal element indexer*/
-                var incount = 0;
-                /*increment the newID*/
-                row.ObjectID = ++newID;
-                row.itemType = "array";
-                
-                /*an array of objects*/
-                if (rxParseArrayOfObjects.IsMatch(row.itemValue))
-                {
-                    
-                }
-                
-                /*a simple array of strings*/
-                else if (rxSimpleStringArray.IsMatch(row.itemValue))
-                {                   
-                    
-                }
 
-                /*a simple array of numbers (float)*/
-                else if (rxSimpleNumericArray.IsMatch(row.itemValue))
-                {
-
-                }
-                /*TODO: an array of boolean values [0101,0001]*/
-                /*TODO: an array of hexidecimal values [0x00a,0x02b]*/
-            }
-            /*object*/
-            else if (row.itemValue.StartsWith("{"))
-            {
-                /*increment the newID*/
-                row.ObjectID = ++newID;
-                row.itemType = "object";
-            }
-            else if (row.itemValue.StartsWith("\""))
+            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.itemValue.Equals("\"\""))
@@ -375,7 +365,23 @@ public partial class UserDefinedFunctions
                     row.itemValue = row.itemValue.Substring(1, row.itemValue.Length - 2);
                 }
                 row.itemType = "string";
-            }            
+            }
+            /*array*/
+            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
+            {
+                /*increment the newID*/
+                newID++;
+                row.ObjectID = newID;
+                row.itemType = "array";
+            }
+            /*object*/
+            else if (row.itemValue.StartsWith("{"))
+            {
+                /*increment the newID*/
+                newID++;
+                row.ObjectID = newID;
+                row.itemType = "object";
+            }
             /*boolean*/
             else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
             {
@@ -391,10 +397,154 @@ public partial class UserDefinedFunctions
             {
                 row.itemType = "int";
             }
-            /*TODO: hexidecimals and other scientific numbers*/
+            /*nulls*/
+            else if (String.IsNullOrEmpty(row.itemValue))
+            {
+                row.itemValue = "null";
+                row.itemType = "null";
+            }
+
             /*add the parsed element to the output collection*/
             rows.Add(row);
         }
+
+        /* double back and handle the array and/or the object rows as the ancestry and hierarchy is established*/
+        foreach (JsonRow r in rows)
+        {
+            /*update the url*/
+            if (r.itemType == "object" || r.itemType == "array")
+            {
+                if (String.IsNullOrEmpty(r.itemKey))
+                {
+                    r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);
+                }
+                else
+                {
+                    r.Node = String.Format("{0}.{1}", eroot.Node, r.itemKey);
+                }
+
+            }
+            else
+            {
+                r.Node = String.Format("{0}", eroot.Node);
+            }
+
+            // double back and handle the array and/or the object rows
+            switch (r.itemType.CompareString())
+            {
+                case "array":
+                    List<JsonRow> iobj = new List<JsonRow>();
+                    if (r.itemValue.StartsWith("[") && rxParseArrayOfObjects.IsMatch(r.itemValue))
+                    {
+                        Int32 oIndex = 0;
+                        foreach (Match o in rxParseArrayOfObjects.Matches(r.itemValue))
+                        {
+                            newID++;/*increment the objectID*/
+                            /*add the nested parent array object*/
+                            JsonRow aroot = new JsonRow
+                            {
+                                ParentID = r.ObjectID,
+                                ObjectID = newID,
+                                Node = String.Format("{0}[{1}]", r.Node, oIndex),
+                                itemKey = String.Empty,
+                                itemValue = o.Value,
+                                itemType = "object"
+                            };
+                            /*add the nested parent array object*/
+                            iobj.Add(aroot);
+                            oIndex++;
+                        }
+                        irows.AddRange(iobj);
+                        foreach (JsonRow aorow in iobj)
+                        {
+                            newID++;/*increment the objectID*/
+                            JsonRow aoroot = new JsonRow
+                            {
+                                ParentID = aorow.ObjectID,
+                                ObjectID = newID,
+                                Node = aorow.Node,
+                                itemKey = String.Empty,
+                                itemValue = String.IsNullOrEmpty(aorow.itemValue) ? "object" : aorow.itemValue
+                            };
+                            /*add the nested elements within the nested parent array object*/
+                            irows.AddRange(ParseJson(aoroot, newID).Cast<JsonRow>());
+
+                            /*retrieve the last ObjectID from the inner collection*/
+                            newID = NewID(rows, irows);
+                        }
+                    }
+                    /*process simple arrays*/
+                    else if (r.itemValue.StartsWith("[") && !rxParseArrayOfObjects.IsMatch(r.itemValue))
+                    {
+                        /*verify this isn't an empty array*/
+                        if (!r.itemValue.Equals("[]"))
+                        {
+                            /*initialize the array element counter*/
+                            Int32 ai = 0;
+                            List<String> items = new List<String>();
+                            /*determine whether a simple string or a numberic array*/
+                            String itype = String.Empty;
+                            if (rxSimpleStringArray.IsMatch(r.itemValue))
+                            {
+                                foreach (Match s in rxSimpleStringArray.Matches(r.itemValue))
+                                {
+                                    items.Add(s.Groups["ArrayItem"].Value);
+                                }
+                                itype = "string";
+                            }
+                            else if (rxSimpleNumericArray.IsMatch(r.itemValue))
+                            {
+                                foreach (Match s in rxSimpleNumericArray.Matches(r.itemValue))
+                                {
+                                    items.Add(s.Groups["ArrayItem"].Value);
+                                }
+                                itype = "float";
+                            }
+                            foreach (String item in items)
+                            {
+                                /*add the nested parent array object*/
+                                JsonRow sa = new JsonRow
+                                {
+                                    ParentID = r.ObjectID,
+                                    ObjectID = 0,
+                                    Node = String.Format("{0}[{1}]", r.Node, ai),
+                                    itemKey = String.Empty,
+                                    itemValue = item,
+                                    itemType = itype
+                                };
+                                /*add the nested parent array object*/
+                                iobj.Add(sa);
+                                ai++;/*increment the array item index*/
+                            }
+                            irows.AddRange(iobj);
+                        }
+                    }
+                    break;
+                case "object":
+                    newID++;
+                    /*initialize the nested elements root values*/
+                    JsonRow oroot = new JsonRow
+                    {
+                        ParentID = r.ObjectID,
+                        ObjectID = newID,
+                        Node = r.Node,
+                        itemKey = r.itemKey,
+                        itemValue = r.itemValue
+                    };
+                    /*add the nested elements to the outer collection*/
+                    irows.AddRange(ParseJson(oroot, newID).Cast<JsonRow>());
+
+                    /*retrieve the last ObjectID from the inner collection*/
+                    newID = NewID(rows, irows);
+                    break;
+                default:
+                    break;
+            }
+        }
+        rows.AddRange(irows);
+        /*retrieve the last ObjectID from the inner collection*/
+        newID = NewID(rows, irows);
+
         return rows;
     }
 
