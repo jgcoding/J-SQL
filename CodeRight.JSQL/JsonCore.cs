@@ -90,14 +90,11 @@ public partial class UserDefinedFunctions
         List<JsonRow> irows = new List<JsonRow>();
 
         var evalue = eroot.itemValue;
-        if (evalue.StartsWith("{"))
+        var etype = JsonType(evalue);
+
+        if (etype == "object" || etype == "array")
         {
-            // the element is an object
-            evalue = evalue.Substring(1, evalue.Length - 2);
-        }
-        else if (evalue.StartsWith("["))
-        {
-            // the element is an array
+            // if the itemValue is an array or an object, peel the outer braces off
             evalue = evalue.Substring(1, evalue.Length - 2);
         }
         else
@@ -309,6 +306,52 @@ public partial class UserDefinedFunctions
         newID = NewID(rows, irows);
 
         return rows;
+    }
+
+    /// <summary>
+    /// Returns the data-type of an item value
+    /// </summary>
+    /// <param name="value">The item value for which the type is to be determined</param>
+    /// <returns>String describing the items type</returns>
+    static String JsonType(String value)
+    {
+        /*nulls*/
+        if (String.IsNullOrEmpty(value))
+        {
+            value = "null";
+            return "null";
+        }
+        /*arrays*/
+        else if (value.StartsWith("["))
+        {
+            return "array";
+        }
+        /*object*/
+        else if (value.StartsWith("{"))
+        {
+            return "object";
+        }
+        else if (value.StartsWith("\""))
+        {
+            return "string";
+        }
+        /*boolean*/
+        else if (Regex.IsMatch(value, "^true|false"))
+        {
+            return "bool";
+        }
+        /*floats*/
+        else if (Regex.IsMatch(value, "^-{0,1}\\d*\\.[\\d]+$"))
+        {
+            return "float";
+        }
+        /*int*/
+        else if (Regex.IsMatch(value, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$"))
+        {
+            return "int";
+        }
+        else
+            return "object";
     }
 
     /// <summary>
