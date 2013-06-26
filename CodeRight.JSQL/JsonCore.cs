@@ -106,6 +106,7 @@ public partial class UserDefinedFunctions
             {
                 ParentID = eroot.ParentID,
                 ObjectID = 0,
+                Node = String.Format("{0}", eroot.Node),
                 itemKey = m.Groups["itemKey"].Value,
                 itemValue = m.Groups["itemValue"].Value
             };
@@ -124,19 +125,21 @@ public partial class UserDefinedFunctions
                 }
                 row.itemType = "string";
             }
-            /*array*/
-            else if (row.itemValue.StartsWith("["))
+            /*array or object*/
+            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("{"))
             {
                 /*increment the newID*/
                 row.ObjectID = ++newID;
-                row.itemType = "array";
-            }
-            /*object*/
-            else if (row.itemValue.StartsWith("{"))
-            {
-                /*increment the newID*/
-                row.ObjectID = ++newID;
-                row.itemType = "object";
+                row.itemType = row.itemValue.StartsWith("[") ? "array" : "object";
+
+                if (String.IsNullOrEmpty(row.itemKey))
+                {
+                    row.Node = String.Format("{0}[{1}]", eroot.Node, row.ObjectID);
+                }
+                else
+                {
+                    row.Node = String.Format("{0}.{1}", eroot.Node, row.itemKey);
+                }
             }
             /*boolean*/
             else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
@@ -167,23 +170,23 @@ public partial class UserDefinedFunctions
         /* double back and handle the array and/or the object rows as the ancestry and hierarchy is established*/
         foreach (JsonRow r in rows)
         {            
-            /*update the url*/
-            if (r.itemType == "object" || r.itemType == "array")
-            {
-                if (String.IsNullOrEmpty(r.itemKey))
-                {
-                    r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);   
-                }
-                else
-                {
-                    r.Node = String.Format("{0}.{1}", eroot.Node, r.itemKey);
-                }
+            ///*update the url*/
+            //if (r.itemType == "object" || r.itemType == "array")
+            //{
+            //    if (String.IsNullOrEmpty(r.itemKey))
+            //    {
+            //        r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);   
+            //    }
+            //    else
+            //    {
+            //        r.Node = String.Format("{0}.{1}", eroot.Node, r.itemKey);
+            //    }
                 
-            }
-            else
-            {
-                r.Node = String.Format("{0}", eroot.Node);
-            }
+            //}
+            //else
+            //{
+            //    r.Node = String.Format("{0}", eroot.Node);
+            //}
 
             // double back and handle the array and/or the object rows
             switch (r.itemType.CompareString())
@@ -303,53 +306,7 @@ public partial class UserDefinedFunctions
 
         return rows;
     }
-
-    /// <summary>
-    /// Returns the data-type of an item value
-    /// </summary>
-    /// <param name="value">The item value for which the type is to be determined</param>
-    /// <returns>String describing the items type</returns>
-    static String JsonType(String value)
-    {
-        /*nulls*/
-        if (String.IsNullOrEmpty(value))
-        {
-            value = "null";
-            return "null";
-        }
-        /*arrays*/
-        else if (value.StartsWith("["))
-        {
-            return "array";
-        }
-        /*object*/
-        else if (value.StartsWith("{"))
-        {
-            return "object";
-        }
-        else if (value.StartsWith("\""))
-        {
-            return "string";
-        }
-        /*boolean*/
-        else if (Regex.IsMatch(value, "^true|false"))
-        {
-            return "bool";
-        }
-        /*floats*/
-        else if (Regex.IsMatch(value, "^-{0,1}\\d*\\.[\\d]+$"))
-        {
-            return "float";
-        }
-        /*int*/
-        else if (Regex.IsMatch(value, "^-{0,1}(?:[1-9]+[0-9]*|[0]{1})$"))
-        {
-            return "int";
-        }
-        else
-            return "object";
-    }
-
+    
     /// <summary>
     /// An experimental, work-in-progress effort to return a list of strongly-typed row objects more efficiently than
     /// the original ParseJson
@@ -366,14 +323,9 @@ public partial class UserDefinedFunctions
         List<JsonRow> irows = new List<JsonRow>();
 
         var evalue = eroot.itemValue;
-        if (evalue.StartsWith("{"))
+        if (evalue.StartsWith("{") || evalue.StartsWith("["))
         {
             // the element is an object
-            evalue = evalue.Substring(1, evalue.Length - 2);
-        }
-        else if (evalue.StartsWith("["))
-        {
-            // the element is an array
             evalue = evalue.Substring(1, evalue.Length - 2);
         }
         else
@@ -406,19 +358,17 @@ public partial class UserDefinedFunctions
                 row.itemType = "string";
             }
             /*array*/
-            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
+            else if (row.itemValue.StartsWith("["))
             {
                 /*increment the newID*/
-                newID++;
-                row.ObjectID = newID;
+                row.ObjectID = ++newID;
                 row.itemType = "array";
             }
             /*object*/
             else if (row.itemValue.StartsWith("{"))
             {
                 /*increment the newID*/
-                newID++;
-                row.ObjectID = newID;
+                row.ObjectID = ++newID;
                 row.itemType = "object";
             }
             /*boolean*/
