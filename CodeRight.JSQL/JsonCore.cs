@@ -130,8 +130,8 @@ public partial class UserDefinedFunctions
             {
                 /*increment the newID*/
                 row.ObjectID = ++newID;
-                row.itemType = row.itemValue.StartsWith("[") ? "array" : "object";
 
+                // construct the node address to the element
                 if (String.IsNullOrEmpty(row.itemKey))
                 {
                     row.Node = String.Format("{0}[{1}]", eroot.Node, row.ObjectID);
@@ -140,6 +140,8 @@ public partial class UserDefinedFunctions
                 {
                     row.Node = String.Format("{0}.{1}", eroot.Node, row.itemKey);
                 }
+                // set the itemType
+                row.itemType = row.itemValue.StartsWith("[") ? "array" : "object";
             }
             /*boolean*/
             else if (String.Equals(row.itemValue, "true", sc) | String.Equals(row.itemValue, "false", sc))
@@ -169,25 +171,7 @@ public partial class UserDefinedFunctions
 
         /* double back and handle the array and/or the object rows as the ancestry and hierarchy is established*/
         foreach (JsonRow r in rows)
-        {            
-            ///*update the url*/
-            //if (r.itemType == "object" || r.itemType == "array")
-            //{
-            //    if (String.IsNullOrEmpty(r.itemKey))
-            //    {
-            //        r.Node = String.Format("{0}[{1}]", eroot.Node, r.ObjectID);   
-            //    }
-            //    else
-            //    {
-            //        r.Node = String.Format("{0}.{1}", eroot.Node, r.itemKey);
-            //    }
-                
-            //}
-            //else
-            //{
-            //    r.Node = String.Format("{0}", eroot.Node);
-            //}
-
+        {   
             // double back and handle the array and/or the object rows
             switch (r.itemType.CompareString())
             {
@@ -198,12 +182,11 @@ public partial class UserDefinedFunctions
                         Int32 oIndex = 0;
                         foreach (Match o in rxParseArrayOfObjects.Matches(r.itemValue))
                         {
-                            newID++;/*increment the objectID*/
                             /*add the nested parent array object*/
                             JsonRow aroot = new JsonRow
                             {
                                 ParentID = r.ObjectID,
-                                ObjectID = newID,
+                                ObjectID = ++newID, // increment the objectID
                                 Node = String.Format("{0}[{1}]", r.Node, oIndex),
                                 itemKey = String.Empty,
                                 itemValue = o.Value,
@@ -216,11 +199,10 @@ public partial class UserDefinedFunctions
                         irows.AddRange(iobj);
                         foreach (JsonRow aorow in iobj)
                         {
-                            newID++;/*increment the objectID*/
                             JsonRow aoroot = new JsonRow
                             {
                                 ParentID = aorow.ObjectID,
-                                ObjectID = newID,
+                                ObjectID = ++newID, // increment the objectID
                                 Node = aorow.Node,
                                 itemKey = String.Empty,
                                 itemValue = String.IsNullOrEmpty(aorow.itemValue) ? "object" : aorow.itemValue
@@ -280,12 +262,11 @@ public partial class UserDefinedFunctions
                     }
                     break;
                 case "object":
-                    newID++;
                     /*initialize the nested elements root values*/
                     JsonRow oroot = new JsonRow
                     {
                         ParentID = r.ObjectID,
-                        ObjectID = newID,
+                        ObjectID = ++newID, // increment the objectID
                         Node = r.Node,
                         itemKey = r.itemKey,
                         itemValue = r.itemValue
