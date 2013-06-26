@@ -68,7 +68,7 @@ public partial class UserDefinedFunctions
         //start parsing the string into a collection
         var rows = ParseJson(root, root.ObjectID);
 
-        ////reset the root parentID to zero. TODO: make this un-necessary
+        //reset the root parentID to zero. TODO: make this un-necessary
         root.ParentID = 0;
 
         rows.Add(root);
@@ -125,7 +125,7 @@ public partial class UserDefinedFunctions
                 row.itemType = "string";
             }
             /*array*/
-            else if (row.itemValue.StartsWith("[") | row.itemValue.StartsWith("\"@"))
+            else if (row.itemValue.StartsWith("["))
             {
                 /*increment the newID*/
                 row.ObjectID = ++newID;
