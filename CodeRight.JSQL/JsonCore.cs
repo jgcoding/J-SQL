@@ -99,9 +99,9 @@ public partial class UserDefinedFunctions
         {
             return rows.ToList();
         }
-
+        Int32 eindex = -1;
         foreach (Match m in rxJsonAll.Matches(evalue))
-        {
+        {            
             JsonRow row = new JsonRow
             {
                 ParentID = eroot.ParentID,
@@ -134,7 +134,7 @@ public partial class UserDefinedFunctions
                 // construct the node address to the element
                 if (String.IsNullOrEmpty(row.itemKey))
                 {
-                    row.Node = String.Format("{0}[{1}]", eroot.Node, row.ObjectID);
+                    row.Node = String.Format("{0}[{1}]", eroot.Node, ++eindex);
                 }
                 else
                 {
