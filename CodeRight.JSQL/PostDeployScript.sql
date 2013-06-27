@@ -45,12 +45,18 @@ EXTERNAL NAME [CodeRight.JSQL].[UserDefinedFunctions].[ToJsonTable]
 GO
 
 
-/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/04/2013 07:05:49 ******/
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/27/2013 15:44:35 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GetNode]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[GetNode]
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[GetNode]    Script Date: 06/27/2013 15:44:35 ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
+
 
  /*=============================================
  Author:		JG Coding
@@ -89,14 +95,23 @@ BEGIN
 		values (@nodeid, @json)
 	RETURN 
 END
+
 GO
 
-/****** Object:  UserDefinedFunction [dbo].[ToJson]    Script Date: 06/04/2013 07:05:49 ******/
+
+
+/****** Object:  UserDefinedFunction [dbo].[ToJson]    Script Date: 06/27/2013 15:44:03 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ToJson]') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION [dbo].[ToJson]
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[ToJson]    Script Date: 06/27/2013 15:44:03 ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
+
 
  /*=============================================
  Author:		JG Coding
@@ -143,6 +158,11 @@ BEGIN
 	RETURN @json
 
 END
+
+
+GO
+
+
 
 GO
 
