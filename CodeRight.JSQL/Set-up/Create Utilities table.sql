@@ -1,3 +1,4 @@
+/***NOTE - IMPORTANT!!!!!!!! YOU MUST update the FILENAME path below to match your local installation!!!!!!!!******/
 USE [master]
 GO
 
