@@ -111,7 +111,8 @@ public partial class UserDefinedFunctions
                 itemValue = m.Groups["itemValue"].Value
             };
             
-            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
+            //if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
+            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"//(new "))
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.itemValue.Equals("\"\""))

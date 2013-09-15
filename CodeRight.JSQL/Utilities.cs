@@ -231,7 +231,19 @@ public partial class UserDefinedFunctions
     {
         return (Int64)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds;
     }
-        
+    /// <summary>
+    /// converts unix time to standard datetime
+    /// </summary>
+    /// <param name="udt">unix date time value</param>
+    /// <returns>standard datetime</returns>
+    [SqlFunction]
+    public static DateTime FromUnixTime(Double udt)
+    {
+        // Unix timestamp is seconds past epoch
+        DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0);
+        return dt.AddMilliseconds(udt).ToUniversalTime();
+    }
+
     public static String StringifySqlColumn(String colName, String sdt)
     {
         String result = string.Empty;
