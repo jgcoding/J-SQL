@@ -36,6 +36,12 @@ public partial class UserDefinedFunctions
     | RegexOptions.Compiled
     );
 
+    public static readonly Regex jsUnixDate = new Regex(
+      "^(?>(?:[\"]?[\\\\]?[/]?)(?<unixDate>(?:new\\s)?Date\\((?<value>[\\-]?\\d+)\\))(?:[\\\\]?[/]?[\"]?))$",
+    RegexOptions.Singleline
+    | RegexOptions.CultureInvariant
+    | RegexOptions.Compiled
+    );
      
     public static readonly Regex rxIncludedKey = new Regex(
             "(?:\"(?<IncludedKey>[\\*a-zA-Z0-9]*/{1})\":\"(?<DocumentID>[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})\"){1,}",

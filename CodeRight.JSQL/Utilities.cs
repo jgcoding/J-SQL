@@ -225,12 +225,23 @@ public partial class UserDefinedFunctions
     /// converts a SQL DateTime value to a unix Int64 value
     /// </summary>
     /// <param name="dt">DateTime value to be converted to Unix format</param>
-    /// <returns>Int64</returns>
+    /// <returns>Double</returns>
     [SqlFunction()]
-    public static Int64 ToUnixTime(DateTime dt)
+    public static Double ToUnixTime(DateTime dt)
     {
-        return (Int64)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds;
+        return (Double)(dt - new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalMilliseconds;
     }
+
+    [SqlFunction()]
+    public static String ToJavaScriptDate(DateTime dt)
+    {
+        Double ticks = ToUnixTime(dt);
+        String result = String.Empty;
+        result = String.Format("/Date({0})/", ticks);
+
+        return result;
+    }
+
     /// <summary>
     /// converts unix time to standard datetime
     /// </summary>
@@ -242,6 +253,23 @@ public partial class UserDefinedFunctions
         // Unix timestamp is seconds past epoch
         DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0);
         return dt.AddMilliseconds(udt).ToUniversalTime();
+    }
+
+    /// <summary>
+    /// converts JavaScript unix Date to .NET datetime
+    /// </summary>
+    /// <param name="jsunixdate">JavaScript unix Date</param>
+    /// <returns>standard datetime</returns>
+    [SqlFunction]
+    public static DateTime FromJsUnixTime(String jsunixdate)
+    {
+        //extract the milliseconds from the JavaScript Unix DateTime
+        var ms = jsUnixDate.IsMatch(jsunixdate) ? Double.Parse(jsUnixDate.Match(jsunixdate).Groups["value"].Value) : 0;
+        
+        // Unix timestamp is seconds past epoch
+        DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0);
+
+        return dt.AddMilliseconds(ms).ToUniversalTime();
     }
 
     public static String StringifySqlColumn(String colName, String sdt)

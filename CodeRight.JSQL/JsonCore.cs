@@ -110,9 +110,16 @@ public partial class UserDefinedFunctions
                 itemKey = m.Groups["itemKey"].Value,
                 itemValue = m.Groups["itemValue"].Value
             };
-            
+
+            // determine if the itemValue contains a JavaScript Unix Date function
+            if (jsUnixDate.IsMatch(row.itemValue))
+            {
+                DateTime dt = FromJsUnixTime(row.itemValue);
+                row.itemValue = dt.ToUniversalTime().ToString();
+                row.itemType = "datetime";
+            }
             //if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"@"))
-            if (row.itemValue.StartsWith("\"") && !row.itemValue.StartsWith("\"//(new "))
+            else if (row.itemValue.StartsWith("\""))
             {
                 /*first, verify the value isn't an empty quoted string*/
                 if (row.itemValue.Equals("\"\""))
@@ -164,7 +171,7 @@ public partial class UserDefinedFunctions
             {
                 row.itemValue = "null";
                 row.itemType = "null";
-            }
+            }            
             
             /*add the parsed element to the output collection*/
             rows.Add(row);
